@@ -304,23 +304,43 @@ changes how quickly the element is understood.
 
 ## 7. Logo
 
-A temporary wordmark until the final **open-loop S** mark exists — a geometric S formed from
-two returning strokes, representing a repeated trip being identified and interrupted. Not
-built yet; the component reserves the slot.
+Shipped. The **open-loop S** mark — a geometric S formed from two returning strokes ending in
+an arrow, representing a repeated trip being identified and interrupted — in a rounded dark
+badge, paired with a "SecondTrip" wordmark.
 
 ```tsx
-<Logo variant="horizontal" />   // wordmark only, today's default
-<Logo variant="icon" />         // reserved — renders the wordmark's initial until the mark ships
-<Logo variant="mono" />         // single-color, for constrained contexts
-<Logo variant="dark" />         // white wordmark, for --surface-inverse backgrounds
+<Logo variant="horizontal" />   // icon + wordmark, for light surfaces — the default
+<Logo variant="icon" />         // mark only — compact contexts, favicon source
+<Logo variant="mono" />         // single-color wordmark, for constrained/print contexts
+<Logo variant="dark" />         // self-contained lockup for dark/inverse surfaces — it paints
+                                 // its own card, so it takes no wrapper (unlike the other three)
 ```
 
-Wordmark: "SecondTrip" set in Manrope 700, `--brand-deep` on light surfaces, `--text-inverse`
-on `--surface-inverse`. No icon is fabricated to fill the gap.
+Source assets live in `frontend/public/brand/` (the four SVGs, kept as a reference/press-kit
+copy); the same markup is inlined directly in `frontend/src/components/brand/logo.tsx` so the
+mark renders with no extra network request. `frontend/src/app/icon.svg` and `apple-icon.png`
+(rasterized from the icon mark, 180×180) wire the favicon via Next.js's file convention.
 
-**Never:** airplane, location pin, truck, wrench, refresh/circular-arrow, infinity symbol, or
-sparkle — none of these are the product's actual visual idea (connected visits and recurring
-patterns), and several are the generic-SaaS clichés §2 exists to rule out.
+### The mark's colors are not the UI palette — a deliberate, explicit call
+
+The mark is drawn in a fixed navy (`#0B1220`) and indigo (`#4F46E5`, with a lighter `#818CF8`
+tint on dark backgrounds) — not `--brand-deep` or `--brand-primary`. A logotype carrying its
+own fixed brand-mark colors independent of a product's UI accent palette is normal (a
+wordmark's ink doesn't change with the product's theme), but it's worth stating plainly rather
+than leaving it as a silent inconsistency: indigo sits close to exactly the "purple/blue
+AI-startup palette" §2's anti-pattern checklist warns against, and it will not match a teal
+button sitting next to it.
+
+**Current position:** keep the two separate. The mark is a fixed asset; every other colored
+element in the product — buttons, badges, charts, score bands — continues to use the
+teal/petrol/apricot system in §3, unchanged. This is a decision to revisit deliberately, not a
+gap to let drift: if indigo starts appearing anywhere else (a link, an active nav-item state, a
+chart series) because it "matches the logo," that is the palette drifting by accident, which
+§3's whole point is to prevent.
+
+**Never**, for anything other than this one shipped mark: airplane, location pin, truck,
+wrench, refresh/circular-arrow, infinity symbol, or sparkle — the ban list in §2 still governs
+every other icon in the product.
 
 ---
 
@@ -566,7 +586,7 @@ reachable without hunting.
 | Font loading | `frontend/src/app/layout.tsx` (`next/font/google`) |
 | Shared primitives | `frontend/src/components/ui/` |
 | Charts | `frontend/src/components/charts/` |
-| Brand/logo | `frontend/src/components/brand/` |
+| Brand/logo | `frontend/src/components/brand/` (component), `frontend/public/brand/` (source SVGs), `frontend/src/app/icon.svg` + `apple-icon.png` (favicon) |
 | Marketing composites | `frontend/src/components/marketing/` |
 | Dashboard composites | `frontend/src/components/dashboard/` |
 

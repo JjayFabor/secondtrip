@@ -457,9 +457,10 @@ export default function TokensPage() {
           <div className="flex flex-wrap items-center gap-6">
             <Logo variant="horizontal" />
             <Logo variant="icon" />
-            <div className="rounded-[var(--radius-control)] bg-surface-inverse p-3">
-              <Logo variant="dark" />
-            </div>
+            <Logo variant="mono" />
+            {/* dark is a self-contained lockup — it paints its own card,
+                no wrapper needed, unlike the other three variants. */}
+            <Logo variant="dark" />
           </div>
         </Section>
       </div>

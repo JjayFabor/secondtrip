@@ -36,7 +36,8 @@ library, not a website.
   Checkbox, Radio Group, Switch, Badge, Card, Table, Dialog, Dropdown Menu, Tabs, Accordion,
   Tooltip, Popover, Skeleton, Separator, Label — vendored on the unified `radix-ui` package,
   styled with tokens only
-- `Logo` in `src/components/brand/` with all four variants, reserved icon-mark slot
+- `Logo` in `src/components/brand/` with all four variants (the icon-mark slot shipped shortly
+  after this phase — see [22 §7](22-design-system.md))
 - `/dev/tokens` route (`src/app/dev/`) rendering the full palette, type scale, spacing steps,
   radius/shadow, every primitive variant (including disabled and `aria-invalid` states), the
   score-band vs. review-outcome mapping, both charts, icons, and logo variants — `noindex` via
@@ -310,7 +311,6 @@ tune signals and weights **here** — not to proceed and hope the UI makes them 
 | Public API + API keys | `api_access` entitlement demand |
 | "Ask SecondTrip" | Everything above |
 | Scheduled reports by email | Customer request |
-| Open-loop S brand mark | Whenever the final asset is produced — `Logo` already has the slot reserved |
 
 ---
 

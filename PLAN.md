@@ -118,8 +118,11 @@ legal, security checklist.
 ## Decisions
 
 Each decision records **why** and **what was rejected**. Full reasoning in
-[`00-overview-and-decisions.md §4`](docs/architecture/00-overview-and-decisions.md) for D1–D28
-and [`22-design-system.md`](docs/architecture/22-design-system.md) for D29–D34.
+[`00-overview-and-decisions.md §4`](docs/architecture/00-overview-and-decisions.md) for D1–D28,
+[`22-design-system.md`](docs/architecture/22-design-system.md) for D29–D34 and D37,
+[`02-multi-tenancy.md`](docs/architecture/02-multi-tenancy.md) for D35, and
+[`21-implementation-sequencing.md` Phase 2](docs/architecture/21-implementation-sequencing.md)
+for D36.
 
 | # | Decision | Why | Rejected |
 | --- | --- | --- | --- |
@@ -159,6 +162,7 @@ and [`22-design-system.md`](docs/architecture/22-design-system.md) for D29–D34
 | D34 | Font self-hosted via `next/font/google`, not the `fonts.googleapis.com` CSP allowance | No runtime request to Google Fonts at all — stricter than the general CSP carve-out already documented for cases that don't self-host | Runtime Google Fonts request behind CSP |
 | D35 | RLS policy wraps `current_setting` in `NULLIF(..., '')` before the `::uuid` cast | `set_config(key, NULL, true)` — the SQL way to clear a GUC — produces an empty string, not NULL; `''::uuid` raises. Verified against a live Postgres session. Without this, "never set" fails safe but "explicitly cleared" throws a 500 — two paths meant to behave identically, diverging | The literal `current_setting(..., true)::uuid` pattern as originally drafted in Phase 0 |
 | D36 | Backend pinned to Python 3.12, not the system's 3.14 | Learned from the Phase 1 TS7 lesson: verify ecosystem compatibility empirically rather than assume the newest version works. 3.12 has full wheel coverage for asyncpg and every other C-extension dependency; 3.14 is too new to trust blindly | System Python 3.14 |
+| D37 | The shipped logo mark keeps its own fixed navy/indigo colors, independent of the app's teal/petrol/apricot token palette | A logotype legitimately has its own brand-mark colors distinct from UI accent colors — same as a wordmark's ink not changing with a product's theme. Documented explicitly (rather than left as a silent mismatch) because indigo sits close to the "purple/blue AI-startup palette" §2's own anti-pattern checklist warns against | Re-deriving the UI palette from the logo's indigo; recoloring the logo to match teal |
 
 ---
 
@@ -193,6 +197,14 @@ and [`22-design-system.md`](docs/architecture/22-design-system.md) for D29–D34
   all clean. Found and fixed a real RLS policy gap (D35) by testing the database directly. See
   [21 Phase 2](docs/architecture/21-implementation-sequencing.md) for the full exit-criteria
   checklist.
+- **Brand mark shipped.** The open-loop S logo (four variants) and favicon are real now —
+  `frontend/src/components/brand/logo.tsx` renders the actual SVG marks, `frontend/public/brand/`
+  holds the source assets, and `frontend/src/app/icon.svg` + `apple-icon.png` wire the favicon
+  via Next.js's file convention. Verified live: production build lists `/icon.svg` and
+  `/apple-icon.png` as generated routes, and the running server's `<head>` carries the correct
+  `<link rel="icon">` / `<link rel="apple-touch-icon">` tags. The mark's navy/indigo keeps its
+  own fixed colors, independent of the app's teal/petrol/apricot palette — a deliberate,
+  documented call, not a drift. See D37 and [22 §7](docs/architecture/22-design-system.md).
 
 ### In progress
 
@@ -228,5 +240,3 @@ and [`22-design-system.md`](docs/architecture/22-design-system.md) for D29–D34
   it still needs a real one-time run against the actual Neon project (as its owner role)
   before any environment but local dev can work, with the dev-only password replaced per the
   script's own header comment. Needed before Step 3's auth flows can target staging/prod.
-- **The open-loop S brand mark** doesn't exist yet — `Logo` ships with the wordmark and a
-  reserved slot (D29/22 §7). Not blocking; swap in when the asset is produced.
