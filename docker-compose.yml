@@ -1,0 +1,27 @@
+name: secondtrip
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: secondtrip_owner
+      POSTGRES_PASSWORD: secondtrip_owner_dev_only
+      POSTGRES_DB: secondtrip_dev
+    ports:
+      # Non-default host port — avoids colliding with any other local
+      # Postgres instance (native or another project's containers).
+      - "5439:5432"
+    volumes:
+      - secondtrip_pg_data:/var/lib/postgresql/data
+      # Runs once, on first container creation, AS secondtrip_owner —
+      # see infra/neon/bootstrap.sql's header comment for why the
+      # executing role matters here.
+      - ./infra/neon/bootstrap.sql:/docker-entrypoint-initdb.d/01-bootstrap.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U secondtrip_owner -d secondtrip_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  secondtrip_pg_data:

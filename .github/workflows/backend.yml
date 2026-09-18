@@ -1,0 +1,76 @@
+name: backend
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "infra/neon/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", "infra/neon/**", ".github/workflows/backend.yml"]
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Matches docker-compose.yml — pgvector's image, not plain postgres,
+        # so CI catches an extension-dependent migration the same way local
+        # dev would.
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: secondtrip_owner
+          POSTGRES_PASSWORD: secondtrip_owner_dev_only
+          POSTGRES_DB: secondtrip_dev
+        ports:
+          - 5439:5432
+        options: >-
+          --health-cmd "pg_isready -U secondtrip_owner -d secondtrip_dev"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      APP_ENV: ci
+      APP_SECRET: ci-secret-not-for-production-use-32chars
+      DATABASE_URL: postgresql+asyncpg://secondtrip_app:secondtrip_app_dev_only@localhost:5439/secondtrip_dev
+      DATABASE_URL_MIGRATIONS: postgresql+asyncpg://secondtrip_owner:secondtrip_owner_dev_only@localhost:5439/secondtrip_dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.10.12"
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Bootstrap RLS roles
+        run: |
+          PGPASSWORD=secondtrip_owner_dev_only psql \
+            -h localhost -p 5439 -U secondtrip_owner -d secondtrip_dev \
+            -f ../infra/neon/bootstrap.sql
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
+      - name: ruff
+        run: uv run ruff check .
+
+      - name: mypy --strict
+        run: uv run mypy .
+
+      - name: import-linter
+        run: uv run lint-imports
+
+      - name: pytest
+        run: uv run pytest -v
+
+      - name: pip-audit
+        run: uvx pip-audit --strict -r <(uv export --no-hashes --no-dev)
+        continue-on-error: true # warn, not block — see docs/architecture/19-testing-strategy.md §10
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2

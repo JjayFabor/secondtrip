@@ -1,0 +1,23 @@
+# Extends gitleaks' default ruleset (secret patterns, entropy detection).
+# See docs/architecture/11-security-threat-model.md §11.
+title = "SecondTrip gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Build artifacts and dependency trees — never committed (see .gitignore), but excluded here too so a raw-directory scan (a pre-commit hook, or gitleaks run without --no-git against a fresh checkout) doesn't report Next.js's own internal cache keys as leaked secrets."
+paths = [
+  '''node_modules/''',
+  '''\.next/''',
+  '''\.venv/''',
+  '''__pycache__/''',
+]
+regexTarget = "match"
+regexes = [
+  # The local-dev-only database passwords in .env.example,
+  # docker-compose.yml, and infra/neon/bootstrap.sql are deliberately
+  # public, low-entropy, documented placeholders — never used outside a
+  # developer's own machine. Real secrets never match this exact string.
+  '''secondtrip_(app|owner)_dev_only''',
+]
