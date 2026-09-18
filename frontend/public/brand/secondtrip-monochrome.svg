@@ -1,10 +1,10 @@
 <svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="180" height="180" rx="42" fill="#0B1220"/>
+  <rect width="180" height="180" rx="42" fill="#12343B"/>
   <circle cx="48" cy="56" r="8" fill="white"/>
   <path d="M48 56H112C126 56 134 64 134 76C134 88 126 96 112 96H72C58 96 50 104 50 116C50 128 58 136 72 136H122"
         stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M120 122L136 136L120 150" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="220" y="112" fill="#0B1220"
+  <text x="220" y="112" fill="#12343B"
         font-family="Inter, Arial, sans-serif" font-size="72" font-weight="700" letter-spacing="-2.2">
     SecondTrip
   </text>

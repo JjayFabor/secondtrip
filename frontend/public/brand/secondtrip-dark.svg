@@ -1,12 +1,12 @@
 <svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="720" height="180" rx="28" fill="#0B1220"/>
+  <rect width="720" height="180" rx="28" fill="#12343B"/>
   <rect x="18" y="18" width="144" height="144" rx="34" fill="white"/>
-  <circle cx="56" cy="63" r="7" fill="#4F46E5"/>
+  <circle cx="56" cy="63" r="7" fill="#0B7A75"/>
   <path d="M56 63H108C120 63 128 70 128 81C128 92 120 99 108 99H76C64 99 57 106 57 117C57 128 64 135 76 135H116"
-        stroke="#0B1220" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M115 123L128 135L115 147" stroke="#4F46E5" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        stroke="#12343B" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M115 123L128 135L115 147" stroke="#0B7A75" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="198" y="112" fill="white"
         font-family="Inter, Arial, sans-serif" font-size="72" font-weight="700" letter-spacing="-2.2">
-    Second<tspan fill="#818CF8">Trip</tspan>
+    Second<tspan fill="#6DAFAC">Trip</tspan>
   </text>
 </svg>

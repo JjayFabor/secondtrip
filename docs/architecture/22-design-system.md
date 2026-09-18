@@ -321,22 +321,25 @@ copy); the same markup is inlined directly in `frontend/src/components/brand/log
 mark renders with no extra network request. `frontend/src/app/icon.svg` and `apple-icon.png`
 (rasterized from the icon mark, 180×180) wire the favicon via Next.js's file convention.
 
-### The mark's colors are not the UI palette — a deliberate, explicit call
+### The mark uses the UI palette — not its own colors
 
-The mark is drawn in a fixed navy (`#0B1220`) and indigo (`#4F46E5`, with a lighter `#818CF8`
-tint on dark backgrounds) — not `--brand-deep` or `--brand-primary`. A logotype carrying its
-own fixed brand-mark colors independent of a product's UI accent palette is normal (a
-wordmark's ink doesn't change with the product's theme), but it's worth stating plainly rather
-than leaving it as a silent inconsistency: indigo sits close to exactly the "purple/blue
-AI-startup palette" §2's anti-pattern checklist warns against, and it will not match a teal
-button sitting next to it.
+The mark shipped first with independent brand colors (navy `#0B1220`, indigo `#4F46E5`/
+`#818CF8`) — deliberately documented as separate from the UI palette at the time (PLAN.md
+D37). A side-by-side comparison of the two in context (the mark next to a teal button in the
+nav) made the mismatch obvious enough to revisit: indigo sat close to exactly the "purple/blue
+AI-startup palette" §2's anti-pattern checklist warns against, and it never matched anything
+else on the page.
 
-**Current position:** keep the two separate. The mark is a fixed asset; every other colored
-element in the product — buttons, badges, charts, score bands — continues to use the
-teal/petrol/apricot system in §3, unchanged. This is a decision to revisit deliberately, not a
-gap to let drift: if indigo starts appearing anywhere else (a link, an active nav-item state, a
-chart series) because it "matches the logo," that is the palette drifting by accident, which
-§3's whole point is to prevent.
+**Current state:** recolored to match (PLAN.md D38, superseding D37). The mark's dark ground
+is `--brand-deep` (`#12343B`); its accent dot/stroke is `--brand-primary` (`#0B7A75`). The
+`dark` lockup's "Trip" text uses `#6DAFAC` — a lighter tint of teal derived the same way
+`tokens.css` derives every other hover/tint shade (`color-mix(in srgb, teal 60%, white 40%)`),
+for contrast against its own petrol card. The mark is still drawn with fixed hex values rather
+than CSS variables (it's a static SVG, inlined for zero extra network requests — see §15), but
+those values are now the *same* colors as the token palette, kept in sync by hand rather than
+by a shared reference. If `--brand-deep` or `--brand-primary` ever change, the four SVGs in
+`frontend/public/brand/` and the inline copies in `logo.tsx` need updating alongside them —
+there's no single source of truth linking the two.
 
 **Never**, for anything other than this one shipped mark: airplane, location pin, truck,
 wrench, refresh/circular-arrow, infinity symbol, or sparkle — the ban list in §2 still governs
