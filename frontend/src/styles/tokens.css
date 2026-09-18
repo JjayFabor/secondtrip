@@ -1,0 +1,143 @@
+/*
+ * Design tokens — the single source of visual truth for SecondTrip.
+ *
+ * Binding spec: docs/architecture/22-design-system.md
+ * No component may reference a raw hex, px radius, or shadow value outside this file.
+ * Marketing and dashboard both import this file — see 22 §0.
+ */
+
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------- *
+ * Tailwind theme — generates bg-, text-, border-, rounded-, and shadow-
+ * utility classes from these keys. Tailwind's default palette and default
+ * spacing scale (4/8/12/16/24/32/48/64/96 == 1/2/3/4/6/8/12/16/24) are
+ * left untouched — see 22 §5.
+ * ---------------------------------------------------------------------- */
+@theme {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+
+  /* raw palette — 22 §3.1. Referenced only by the @theme block below;
+     components use the semantic names, never these. */
+  --color-petrol: #12343b;
+  --color-teal: #0b7a75;
+  --color-apricot: #f2b36d;
+  --color-canvas: #f6f8f7;
+  --color-white: #ffffff;
+  --color-ink: #172b2f;
+  --color-slate: #607176;
+  --color-border-soft: #d8e2e1;
+
+  /* semantic surfaces */
+  --color-surface-canvas: var(--color-canvas);
+  --color-surface-raised: var(--color-white);
+  --color-surface-inverse: var(--color-petrol);
+
+  /* semantic borders — border-soft is decorative only, border-strong is for
+     anything that must read as a boundary on its own (~3.2:1 vs white,
+     meets WCAG 1.4.11; border-soft is ~1.3:1 and fails it). See 22 §3.3. */
+  --color-border-subtle: var(--color-border-soft);
+  --color-border-strong: #7e9490;
+
+  /* semantic text */
+  --color-text-primary: var(--color-ink);
+  --color-text-secondary: var(--color-slate); /* >=13px only — ~5.1:1 on white */
+  --color-text-inverse: var(--color-white);
+  --color-text-on-accent: var(--color-ink); /* required on any apricot fill */
+
+  /* brand */
+  --color-brand-primary: var(--color-teal);
+  --color-brand-deep: var(--color-petrol);
+  --color-accent: var(--color-apricot);
+
+  /* status — success/danger are muted, in-family hues verified >=4.5:1 on
+     white as text/icon colors, not just fills. Warning deliberately reuses
+     --color-accent (22 §3.2). */
+  --color-success: #3f7d58;
+  --color-warning: var(--color-accent);
+  --color-danger: #b54b3f;
+
+  /* radius — 22 §5. Everything else stays square. */
+  --radius-control: 0.5rem; /* 8px — buttons, inputs, selects */
+  --radius-card: 0.75rem; /* 12px — cards, panels */
+  --radius-modal: 0.75rem; /* 12px — dialogs */
+
+  /* shadow — exactly two, elevation only. Never on an ordinary content
+     card — see 22 §5. --shadow-sm: dropdowns, popovers, tooltips.
+     --shadow-md: dialogs, modals. No third shadow value exists anywhere
+     in this system, including on small interactive controls. */
+  --shadow-sm: 0 2px 8px rgb(23 43 47 / 8%);
+  --shadow-md: 0 8px 24px rgb(23 43 47 / 12%);
+}
+
+/* ---------------------------------------------------------------------- *
+ * Derived tokens — computed from the theme colors above with color-mix()
+ * rather than hand-picked hex steps, so every derived shade stays
+ * consistent if a base token ever changes. Not theme keys: these don't
+ * need their own Tailwind utility, they're consumed as plain CSS
+ * variables (arbitrary-value utilities or component-level CSS).
+ * ---------------------------------------------------------------------- */
+:root {
+  --brand-primary-hover: color-mix(in srgb, var(--color-brand-primary) 88%, black);
+  --brand-primary-active: color-mix(in srgb, var(--color-brand-primary) 78%, black);
+
+  --success-bg: color-mix(in srgb, var(--color-success) 12%, white);
+  --warning-bg: color-mix(in srgb, var(--color-warning) 16%, white);
+  --danger-bg: color-mix(in srgb, var(--color-danger) 12%, white);
+
+  /* Focus rings use teal, never apricot — apricot alone fails the 3:1
+     non-text contrast target against white/canvas. See 22 §3.3. */
+  --focus-ring: var(--color-brand-primary);
+
+  /* motion — 22 §8. Restrained: hover states, dropdown/modal/accordion
+     reveal transitions, skeleton pulse. Nothing else. */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --easing-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border-subtle);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: var(--color-surface-canvas);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-variant-numeric: normal;
+  }
+
+  /* Money and dashboard metrics always use tabular figures so columns of
+     numbers align — see 22 §4. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
