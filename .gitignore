@@ -1,0 +1,8 @@
+# Root-level hygiene. frontend/ and backend/ carry their own
+# stack-specific .gitignore for their build artifacts and caches.
+
+.DS_Store
+*.swp
+.idea/
+.vscode/
+!.vscode/extensions.json
