@@ -60,7 +60,7 @@ export const SelectItem = React.forwardRef<
   <RadixSelect.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-[6px] py-1.5 pl-8 pr-2",
+      "relative flex w-full cursor-default select-none items-center rounded-[var(--radius-control)] py-1.5 pl-8 pr-2",
       "text-sm text-text-primary outline-none",
       "data-[highlighted]:bg-surface-canvas",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",

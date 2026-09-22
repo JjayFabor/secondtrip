@@ -22,7 +22,7 @@ const badgeVariants = cva(
       variant: {
         neutral: "bg-surface-canvas text-text-secondary border border-border-strong",
         strong: "bg-brand-primary text-text-inverse",
-        success: "bg-[var(--success-bg)] text-success",
+        success: "bg-[var(--success-bg)] text-text-primary",
         warning: "bg-[var(--warning-bg)] text-text-on-accent",
         danger: "bg-[var(--danger-bg)] text-danger",
       },

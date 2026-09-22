@@ -2,7 +2,7 @@ name: secondtrip
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: postgres:17
     environment:
       POSTGRES_USER: secondtrip_owner
       POSTGRES_PASSWORD: secondtrip_owner_dev_only

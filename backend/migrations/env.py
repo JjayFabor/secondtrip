@@ -20,7 +20,32 @@ from app.core.settings import get_settings
 from app.db.base import Base
 
 # Import every module's models here as they're built, so `Base.metadata`
-# is complete for autogenerate. None exist yet in Phase 2.
+# is complete for autogenerate.
+from app.modules.audit import models as audit_models
+from app.modules.billing import models as billing_models
+from app.modules.customers import models as customer_models
+from app.modules.detection import models as detection_models
+from app.modules.idempotency import models as idempotency_models
+from app.modules.identity import models as identity_models
+from app.modules.imports import models as import_models
+from app.modules.jobs import models as job_models
+from app.modules.organizations import models as organization_models
+from app.modules.tasks import models as task_models
+from app.modules.workforce import models as workforce_models
+
+_MODEL_MODULES = (
+    audit_models,
+    billing_models,
+    customer_models,
+    detection_models,
+    identity_models,
+    idempotency_models,
+    import_models,
+    job_models,
+    organization_models,
+    task_models,
+    workforce_models,
+)
 
 config = context.config
 

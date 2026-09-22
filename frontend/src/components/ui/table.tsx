@@ -9,9 +9,22 @@ import { cn } from "@/lib/utils";
  * automatically for numeric columns — consistent alignment is what makes a
  * column of money or counts trustworthy at a glance.
  */
-export function Table({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) {
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  /** Makes the bounded horizontal scroll region keyboard-focusable and gives it an accessible name. */
+  scrollLabel?: string;
+}
+
+export function Table({ className, scrollLabel, ...props }: TableProps) {
   return (
-    <div className="w-full overflow-x-auto">
+    <div
+      className={cn(
+        "w-full overflow-x-auto",
+        scrollLabel && "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)]",
+      )}
+      role={scrollLabel ? "region" : undefined}
+      aria-label={scrollLabel}
+      tabIndex={scrollLabel ? 0 : undefined}
+    >
       <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   );

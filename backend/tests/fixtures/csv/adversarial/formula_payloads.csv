@@ -1,0 +1,2 @@
+customer_name,summary,description,technician_notes
+=2+2,+SUM(A1:A2),-1+1,@malicious

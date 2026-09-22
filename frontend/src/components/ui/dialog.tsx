@@ -38,7 +38,7 @@ export const DialogContent = React.forwardRef<
       {children}
       <RadixDialog.Close
         className={cn(
-          "absolute right-4 top-4 rounded-[4px] text-text-secondary",
+          "absolute right-4 top-4 rounded-[var(--radius-control)] text-text-secondary",
           "transition-colors duration-[var(--duration-fast)] hover:text-text-primary",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
         )}

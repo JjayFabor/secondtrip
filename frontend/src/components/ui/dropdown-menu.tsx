@@ -36,7 +36,7 @@ export const DropdownMenuItem = React.forwardRef<
   <RadixDropdownMenu.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-[6px] px-2 py-1.5 text-sm",
+      "relative flex cursor-default select-none items-center rounded-[var(--radius-control)] px-2 py-1.5 text-sm",
       "text-text-primary outline-none transition-colors duration-[var(--duration-fast)]",
       "data-[highlighted]:bg-surface-canvas",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
@@ -56,7 +56,7 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
     ref={ref}
     checked={checked}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-[6px] py-1.5 pl-8 pr-2 text-sm",
+      "relative flex cursor-default select-none items-center rounded-[var(--radius-control)] py-1.5 pl-8 pr-2 text-sm",
       "text-text-primary outline-none transition-colors duration-[var(--duration-fast)]",
       "data-[highlighted]:bg-surface-canvas",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
@@ -81,7 +81,7 @@ export const DropdownMenuRadioItem = React.forwardRef<
   <RadixDropdownMenu.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-[6px] py-1.5 pl-8 pr-2 text-sm",
+      "relative flex cursor-default select-none items-center rounded-[var(--radius-control)] py-1.5 pl-8 pr-2 text-sm",
       "text-text-primary outline-none transition-colors duration-[var(--duration-fast)]",
       "data-[highlighted]:bg-surface-canvas",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
@@ -134,7 +134,7 @@ export const DropdownMenuSubTrigger = React.forwardRef<
   <RadixDropdownMenu.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center rounded-[6px] px-2 py-1.5 text-sm",
+      "flex cursor-default select-none items-center rounded-[var(--radius-control)] px-2 py-1.5 text-sm",
       "text-text-primary outline-none transition-colors duration-[var(--duration-fast)]",
       "data-[highlighted]:bg-surface-canvas data-[state=open]:bg-surface-canvas",
       inset && "pl-8",
