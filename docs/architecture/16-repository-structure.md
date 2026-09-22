@@ -299,7 +299,7 @@ unrelated pairs — so a detection change's effect is immediately visible.
 
 The seed is deterministic, local-only, and entirely fictional. It is installed through the same
 storage, queue, validation, and processing services used by application imports. A matching second
-run performs no writes and preserves organization and job IDs; `RESET=1 make seed-demo` rebuilds
+run performs no writes and preserves organization and job IDs; `DEMO_RESET=1 make seed-demo` rebuilds
 only the reserved `secondtrip-hvac-demo` tenant. Ground-truth pair labels live in
 `backend/seeds/data/hvac_demo_expectations.json`, never on operational rows.
 

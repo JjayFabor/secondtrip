@@ -116,7 +116,7 @@ class Settings(BaseSettings):
 
     # --- Local demo tooling -------------------------------------------------
     demo_password: str = Field(default="SecondTripDemo-2026!", validation_alias="DEMO_PASSWORD")
-    demo_reset: bool = Field(default=False, validation_alias="RESET")
+    demo_reset: bool = False
 
     # --- Billing ------------------------------------------------------------
     billing_provider: Literal["noop"] = "noop"

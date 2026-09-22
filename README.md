@@ -18,7 +18,7 @@ verification, manual review on a real dataset, and the production launch gates i
 With local Postgres available, `make seed-demo` installs 96 entirely fictional HVAC jobs through
 the production import lifecycle. The dataset contains labelled callback, maintenance,
 planned-multivisit, unrelated, and standalone scenarios for detection development. Re-running the
-command is a verified no-op when the fixture is current. Set `RESET=1` to rebuild only the reserved
+command is a verified no-op when the fixture is current. Set `DEMO_RESET=1` to rebuild only the reserved
 demo tenant, or `DEMO_PASSWORD=...` to choose its local password; neither value is printed.
 
 `make perf-import` generates (but does not commit) a deterministic real-shaped 50,000-row CSV and

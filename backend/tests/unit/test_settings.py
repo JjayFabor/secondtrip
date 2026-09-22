@@ -60,6 +60,23 @@ def test_neon_libpq_urls_are_normalized_for_asyncpg(settings: Settings) -> None:
     assert "-pooler" not in configured.database_url_migrations
 
 
+def test_demo_reset_ignores_render_terminal_reset_variable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RESET", "\x1b(B\x1b[m")
+    monkeypatch.setenv("DEMO_RESET", "true")
+
+    configured = Settings(
+        _env_file=None,
+        app_secret="test-secret-with-at-least-32-characters",
+        database_url="postgresql+asyncpg://app:app@localhost/secondtrip",
+        database_url_migrations="postgresql+asyncpg://owner:owner@localhost/secondtrip",
+        debug=False,
+    )
+
+    assert configured.demo_reset is True
+
+
 @pytest.mark.parametrize(
     ("updates", "message"),
     [

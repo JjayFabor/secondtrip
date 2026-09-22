@@ -54,7 +54,7 @@ test:
 	cd backend && uv run pytest
 	@echo "No frontend tests yet — see docs/architecture/19-testing-strategy.md"
 
-# Local-only release fixtures. Override DEMO_PASSWORD/RESET and ROWS/RUNS/WARMUP via env.
+# Local-only release fixtures. Override DEMO_PASSWORD/DEMO_RESET and ROWS/RUNS/WARMUP via env.
 seed-demo: db-up
 	cd backend && DEBUG=false uv run python -m seeds.demo
 
