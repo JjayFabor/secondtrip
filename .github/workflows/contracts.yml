@@ -1,0 +1,65 @@
+name: contracts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/app/**"
+      - "backend/scripts/export_openapi.py"
+      - "backend/pyproject.toml"
+      - "backend/uv.lock"
+      - "packages/contracts/**"
+      - "Makefile"
+      - ".github/workflows/contracts.yml"
+  pull_request:
+    paths:
+      - "backend/app/**"
+      - "backend/scripts/export_openapi.py"
+      - "backend/pyproject.toml"
+      - "backend/uv.lock"
+      - "packages/contracts/**"
+      - "Makefile"
+      - ".github/workflows/contracts.yml"
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: ci
+      APP_SECRET: ci-secret-not-for-production-use-32chars
+      DATABASE_URL: postgresql+asyncpg://secondtrip_app:unused@localhost/secondtrip
+      DATABASE_URL_MIGRATIONS: postgresql+asyncpg://secondtrip_owner:unused@localhost/secondtrip
+      DEBUG: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.10.12"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: packages/contracts/pnpm-lock.yaml
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --locked
+
+      - name: Install contract generator
+        working-directory: packages/contracts
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate contracts
+        run: make contracts
+
+      - name: Fail on contract drift
+        run: git diff --exit-code -- packages/contracts/src/api.d.ts
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
