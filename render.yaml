@@ -3,6 +3,7 @@ services:
     name: secondtrip-api
     runtime: python
     rootDir: backend
+    region: singapore
     plan: 0.5c-512mb
     numInstances: 1
     autoDeployTrigger: checksPass
