@@ -1,0 +1,72 @@
+.walkthrough {
+  contain: layout paint;
+}
+
+.walkthrough[data-running="false"] *,
+.walkthrough[data-running="false"] *::before,
+.walkthrough[data-running="false"] *::after {
+  animation-play-state: paused !important;
+}
+
+/* Direct navigation intentionally renders a scene's completed state. Those
+   elements must not mount at frame zero of an entrance animation. A genuine
+   mid-play pause does not set data-static, so it still freezes in place. */
+.walkthrough[data-static="true"] .reveal,
+.walkthrough[data-static="true"] .rowReveal,
+.walkthrough[data-static="true"] .pulseOnce {
+  animation: none;
+}
+
+.reveal {
+  animation: reveal var(--duration-base) var(--easing-out) both;
+}
+
+.rowReveal {
+  animation: row-reveal 320ms var(--easing-out) both;
+}
+
+.pulseOnce {
+  animation: pulse-once 560ms var(--easing-out) both;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes row-reveal {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-once {
+  0% {
+    outline: 0 solid color-mix(in srgb, var(--color-brand-primary) 22%, transparent);
+  }
+  55% {
+    outline: 6px solid color-mix(in srgb, var(--color-brand-primary) 10%, transparent);
+  }
+  100% {
+    outline: 0 solid transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .rowReveal,
+  .pulseOnce {
+    animation: none;
+  }
+}
