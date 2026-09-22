@@ -46,10 +46,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
-      - name: Bootstrap RLS roles
+      - name: Create and bootstrap RLS role
         run: |
           PGPASSWORD=secondtrip_owner_dev_only psql \
             -h localhost -p 5439 -U secondtrip_owner -d secondtrip_dev \
+            -f ../infra/neon/local-role.sql \
             -f ../infra/neon/bootstrap.sql
 
       - name: Run migrations
