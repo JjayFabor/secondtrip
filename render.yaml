@@ -5,6 +5,8 @@ services:
     rootDir: backend
     region: singapore
     plan: 0.5c-512mb
+    domains:
+      - api.secondtrip.jjayfabor.com
     numInstances: 1
     autoDeployTrigger: checksPass
     buildCommand: uv sync --locked --no-dev
