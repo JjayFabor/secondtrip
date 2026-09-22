@@ -37,8 +37,8 @@ After deployment:
 
 ```bash
 ./scripts/smoke-deployment.sh \
-  https://secondtrip.example.com \
-  https://api.secondtrip.example.com
+  https://secondtrip.jjayfabor.com \
+  https://api.secondtrip.jjayfabor.com
 ```
 
 Then complete the authenticated import/detection/review smoke flow from

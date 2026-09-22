@@ -1,7 +1,7 @@
 [
   {
     "AllowedOrigins": [
-      "https://app.example.com"
+      "https://secondtrip.jjayfabor.com"
     ],
     "AllowedMethods": [
       "PUT"

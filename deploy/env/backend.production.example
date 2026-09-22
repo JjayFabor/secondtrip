@@ -1,15 +1,15 @@
 # Copy these names into Render. Do not use this file as a secret store.
 # Example host layout:
-#   frontend https://secondtrip.example.com
-#   API      https://api.secondtrip.example.com
-#   cookie   .secondtrip.example.com
+#   frontend https://secondtrip.jjayfabor.com
+#   API      https://api.secondtrip.jjayfabor.com
+#   cookie   .secondtrip.jjayfabor.com
 
 APP_ENV=production
 APP_NAME=SecondTrip
 APP_SECRET=REPLACE_ME
-APP_URL=https://api.secondtrip.example.com
-FRONTEND_URL=https://secondtrip.example.com
-CORS_ALLOWED_ORIGINS=["https://secondtrip.example.com"]
+APP_URL=https://api.secondtrip.jjayfabor.com
+FRONTEND_URL=https://secondtrip.jjayfabor.com
+CORS_ALLOWED_ORIGINS=["https://secondtrip.jjayfabor.com"]
 DEBUG=false
 LOG_LEVEL=INFO
 LOG_FORMAT=json
@@ -27,7 +27,7 @@ DB_ECHO=false
 SESSION_COOKIE_NAME=st_session
 SESSION_IDLE_TIMEOUT_DAYS=14
 SESSION_ABSOLUTE_TIMEOUT_DAYS=30
-COOKIE_DOMAIN=.secondtrip.example.com
+COOKIE_DOMAIN=.secondtrip.jjayfabor.com
 COOKIE_SECURE=true
 CSRF_COOKIE_NAME=st_csrf
 
@@ -63,7 +63,7 @@ DETECTION_MAX_FOLLOWUPS_PER_JOB=25
 
 EMAIL_PROVIDER=resend
 EMAIL_API_KEY=REPLACE_ME
-EMAIL_FROM_ADDRESS=noreply@updates.secondtrip.example.com
+EMAIL_FROM_ADDRESS=noreply@mail.secondtrip.jjayfabor.com
 EMAIL_FROM_NAME=SecondTrip
 
 BILLING_PROVIDER=noop

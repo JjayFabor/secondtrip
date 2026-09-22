@@ -21,7 +21,7 @@ always-on application stack.
 | Service | Resource to create | Required now | Purpose |
 | --- | --- | :---: | --- |
 | GitHub | repository + Actions + protected production environment | yes | Source, CI, deployment trigger, environment approvals |
-| Domain/DNS | `secondtrip.<root>` + `api.secondtrip.<root>` | yes | Same-site custom domains required for session cookies |
+| Domain/DNS | `secondtrip.jjayfabor.com` + `api.secondtrip.jjayfabor.com` | yes | Same-site custom domains required for session cookies |
 | Vercel | Next.js project, root `frontend/` | yes | SSR frontend and marketing site |
 | Render | paid web service, root `backend/` | yes | FastAPI and the in-process PostgreSQL worker |
 | Neon | production project with suitable restore history | yes | PostgreSQL, RLS, job queue, analytics store |
@@ -56,9 +56,9 @@ or Axiom for longer log retention, and a dedicated Render worker when the trigge
 Authentication requires the frontend and API to share a parent domain:
 
 ```text
-frontend  https://secondtrip.<root>
-API       https://api.secondtrip.<root>
-cookie    .secondtrip.<root>
+frontend  https://secondtrip.jjayfabor.com
+API       https://api.secondtrip.jjayfabor.com
+cookie    .secondtrip.jjayfabor.com
 ```
 
 Do not attempt production authentication with a `vercel.app` frontend and an `onrender.com`
@@ -99,7 +99,8 @@ For the production environment:
 
 ## 6. Resend creation
 
-1. Verify a dedicated transactional sending subdomain instead of the root domain.
+1. Verify the dedicated transactional sending subdomain `mail.secondtrip.jjayfabor.com` instead
+   of the root domain.
 2. Publish the provider's SPF and DKIM records; add DMARC before public launch.
 3. Create a production API key scoped as narrowly as the account supports.
 4. Set `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY`, and an address on the verified subdomain.
@@ -124,8 +125,8 @@ The committed deployment package consists of:
 - Install: `pnpm install --frozen-lockfile`
 - Build: `pnpm build`
 - Required environment:
-  - `NEXT_PUBLIC_API_URL=https://api.secondtrip.<root>`
-  - `API_INTERNAL_URL=https://api.secondtrip.<root>` unless private cross-cloud networking is
+  - `NEXT_PUBLIC_API_URL=https://api.secondtrip.jjayfabor.com`
+  - `API_INTERNAL_URL=https://api.secondtrip.jjayfabor.com` unless private cross-cloud networking is
     added later
 - Attach the frontend custom domain before testing authentication.
 

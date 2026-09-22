@@ -6,3 +6,9 @@
 .idea/
 .vscode/
 !.vscode/extensions.json
+.neon
+.env.local
+node_modules/
+.agents/
+.codex/
+skills-lock.json
