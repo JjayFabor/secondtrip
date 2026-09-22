@@ -16,10 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Matches docker-compose.yml — pgvector's image, not plain postgres,
-        # so CI catches an extension-dependent migration the same way local
-        # dev would.
-        image: pgvector/pgvector:pg17
+        # V1 has no embeddings or vector extension; match the plain PostgreSQL
+        # 17 image used by local development and the production architecture.
+        image: postgres:17
         env:
           POSTGRES_USER: secondtrip_owner
           POSTGRES_PASSWORD: secondtrip_owner_dev_only
@@ -70,7 +69,6 @@ jobs:
 
       - name: pip-audit
         run: uvx pip-audit --strict -r <(uv export --no-hashes --no-dev)
-        continue-on-error: true # warn, not block — see docs/architecture/19-testing-strategy.md §10
 
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2

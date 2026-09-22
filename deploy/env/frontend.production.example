@@ -1,0 +1,8 @@
+# Copy these values into the Vercel Production environment.
+# API_INTERNAL_URL is public in the Vercel + Render topology because the
+# providers do not share a private network.
+
+NEXT_PUBLIC_APP_URL=https://secondtrip.example.com
+NEXT_PUBLIC_API_URL=https://api.secondtrip.example.com
+API_INTERNAL_URL=https://api.secondtrip.example.com
+NEXT_PUBLIC_ENVIRONMENT=production
