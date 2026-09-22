@@ -132,8 +132,8 @@ Violating any of these is a defect, regardless of whether tests pass.
 ## Commands
 
 ```bash
-make dev          # postgres+pgvector, migrate, seed, api + web
-make test         # backend pytest + frontend vitest
+make dev          # start postgres; then use dev-backend/dev-frontend in separate terminals
+make test         # backend pytest (no frontend test suite yet)
 make lint         # ruff, mypy --strict, import-linter, eslint, tsc
 make migrate m="message"
 make contracts    # regenerate packages/contracts from OpenAPI

@@ -42,7 +42,7 @@ Four categories of data exist in this system, and they must never be conflated:
 | --- | --- | --- | --- |
 | **1. Source / raw** | uploaded CSV file, `import_rows.raw_data` | The customer | No — it is evidence |
 | **2. Normalized operational** | `jobs`, `customers`, `equipment` | Import pipeline | Yes, from layer 1 |
-| **3. Derived analytical** | `rework_candidates`, signals, scores, embeddings, AI analyses | Detection pipeline | **Yes — must be safe to wipe and recompute** |
+| **3. Derived analytical** | `rework_candidates`, signals, scores | Detection pipeline | **Yes — must be safe to wipe and recompute** |
 | **4. Human-confirmed truth** | `rework_reviews`, chosen category, chosen root cause | A manager | **No — never overwritten by a machine** |
 
 Every design decision in this specification traces back to keeping these four separate.
@@ -66,7 +66,7 @@ See [07-detection-engine.md §2](07-detection-engine.md).
 | --- | --- | --- |
 | Authentication | Application-managed in FastAPI; opaque session token in an httpOnly cookie | No vendor cost, one authorization source of truth, revocation is a row delete. We build verification/reset/invite flows ourselves. See [03-authentication.md](03-authentication.md) |
 | Year-one scale target | ≤ ~100k jobs per organization | Plain Postgres tables, no partitioning, in-process candidate generation. Partition triggers documented, not built. See [04-data-model.md §15](04-data-model.md) |
-| V1 detection scope | Stages 1–4 + 6 (deterministic + embeddings + human review). Stage 5 (LLM classification) designed and feature-flagged **off** | Near-zero AI spend at launch; description similarity still available, which is what separates a real callback from two unrelated visits |
+| V1 detection scope | Deterministic candidate generation, explainable scoring, and human review | Keeps the first product simple, auditable, inexpensive, and independent of an external model provider |
 
 ---
 
@@ -93,21 +93,19 @@ vertical scaling is exhausted — extract *detection workers* first, not the API
 
 ---
 
-### ADR-002 — PostgreSQL is the queue, the vector store, and the analytics store
+### ADR-002 — PostgreSQL is the queue and analytics store
 
 **Choice:** No Redis, no Kafka, no Celery, no Elasticsearch, no Pinecone/Weaviate in V1.
 Background jobs run on a `background_jobs` table claimed with `FOR UPDATE SKIP LOCKED`.
-Embeddings live in a `pgvector` column. Analytics are SQL aggregates over Postgres.
+Analytics are SQL aggregates over Postgres.
 
 **Why:** Each of those services costs money at idle, and at our scale each solves a problem we
-do not have. `SKIP LOCKED` is a correct, well-understood work-queue primitive. pgvector's
-exact search over a few hundred thousand rows is comfortably fast, and — critically — most of
-our vector work is *pairwise comparison of two known rows*, which needs no index at all.
+do not have. `SKIP LOCKED` is a correct, well-understood work-queue primitive.
 
 **Rejected:** Redis + Celery/Dramatiq, dedicated vector DB, OpenSearch.
 
 **Revisit when:** the specific triggers in [09-background-jobs.md §9](09-background-jobs.md)
-and [08-ai-and-embeddings.md §5](08-ai-and-embeddings.md) are hit.
+are hit.
 
 ---
 
@@ -133,19 +131,16 @@ See [02-multi-tenancy.md](02-multi-tenancy.md).
 
 ---
 
-### ADR-004 — The detection engine must work with the AI provider switched off
+### ADR-004 — V1 detection is deterministic
 
-**Choice:** Stages 1, 2, 4 and 6 are pure deterministic SQL and Python. Stage 3 (embeddings)
-degrades to "similarity signal unavailable" if the provider is down. Stage 5 (LLM) is optional
-and off by default.
+**Choice:** Candidate generation and scoring use only deterministic SQL and Python. Human
+review supplies the final classification. There is no AI provider or embedding pipeline in V1.
 
-**Why:** Two independent reasons. **Reliability** — an OpenAI outage must not stop a customer
-importing a file and seeing findings. **Credibility** — "the AI says so" is not an argument a
-manager can take to a technician. A score built from *8 days apart, same equipment, $0
-invoice* is. The LLM's role is to add a readable narrative and a root-cause hypothesis on top
-of a score that already stands on its own.
+**Why:** A score built from *8 days apart, same equipment, $0 invoice* is inexpensive,
+reproducible, and defensible to a technician. Real customer reviews should first prove where
+the deterministic signals are insufficient before another subsystem is introduced.
 
-**Rejected:** an LLM-first pipeline that classifies every pair.
+**Rejected:** embeddings or an LLM-first pipeline before real-data evidence justifies them.
 
 ---
 
@@ -192,17 +187,17 @@ See [16-repository-structure.md](16-repository-structure.md).
 
 ### ADR-008 — Providers behind protocols, adapters at the edge
 
-**Choice:** `AIProvider`, `StorageProvider`, `EmailProvider`, `BillingProvider` are
+**Choice:** `StorageProvider`, `EmailProvider`, and `BillingProvider` are
 `typing.Protocol` definitions in `app/providers/<kind>/base.py`. Domain services depend only
-on the protocol. Concrete adapters (OpenAI, R2, Resend) are constructed once in composition
+on the protocol. Concrete adapters (R2, Resend) are constructed once in composition
 root and injected.
 
 **Why:** This is the smallest abstraction that delivers the brief's requirement (no domain
-dependency on OpenAI/Stripe) without building an enterprise plugin framework. The protocols
+dependency on storage/email/billing vendors) without building an enterprise plugin framework. The protocols
 are narrow — four to five methods each — and shaped by *our* needs, not by the vendor's SDK.
 
 **Anti-goal:** do not build a generic "provider registry with dynamic loading." Two
-implementations of each protocol (real + fake-for-tests) is the expected count.
+implementations should be added only when the application actually needs them.
 
 ---
 
@@ -262,7 +257,7 @@ Explicitly out of scope, listed so later agents do not "helpfully" add them:
 - Real-time collaboration, websockets, live dashboards.
 - Mobile app.
 - Multi-currency per organization (single currency per org, stored explicitly so the upgrade is additive).
-- "Ask SecondTrip" natural-language querying. The embedding infrastructure anticipates it; the feature is not V1.
+- "Ask SecondTrip" natural-language querying.
 - SSO/SAML, SCIM.
 - Public API for customers (API access is an entitlement key reserved for later).
 
@@ -279,7 +274,7 @@ Explicitly out of scope, listed so later agents do not "helpfully" add them:
 | [05-erd.md](05-erd.md) | Mermaid ERDs (core, operational, detection/system) |
 | [06-csv-ingestion.md](06-csv-ingestion.md) | Upload → map → validate → commit → process |
 | [07-detection-engine.md](07-detection-engine.md) | The six-stage pipeline, signals, scoring, explainability |
-| [08-ai-and-embeddings.md](08-ai-and-embeddings.md) | AIProvider protocol, pgvector strategy, RAG boundaries |
+| [08-ai-and-embeddings.md](08-ai-and-embeddings.md) | Deferred research only; not part of the current architecture |
 | [09-background-jobs.md](09-background-jobs.md) | Postgres queue, retries, locking, graduation triggers |
 | [10-storage.md](10-storage.md) | StorageProvider protocol, R2 keys, signed URLs |
 | [11-security-threat-model.md](11-security-threat-model.md) | Threats, mitigations, prompt injection |
@@ -289,7 +284,7 @@ Explicitly out of scope, listed so later agents do not "helpfully" add them:
 | [15-api-design.md](15-api-design.md) | V1 endpoint surface, conventions, versioning |
 | [16-repository-structure.md](16-repository-structure.md) | Monorepo layout, module rules |
 | [17-configuration.md](17-configuration.md) | Environment variable specification |
-| [18-observability.md](18-observability.md) | Logging, errors, metrics, AI cost tracking |
+| [18-observability.md](18-observability.md) | Logging, errors, and operational metrics |
 | [19-testing-strategy.md](19-testing-strategy.md) | What to test and what not to |
 | [20-frontend-and-seo.md](20-frontend-and-seo.md) | Next.js structure, SEO/AEO architecture |
 | [21-implementation-sequencing.md](21-implementation-sequencing.md) | Build order with exit criteria |

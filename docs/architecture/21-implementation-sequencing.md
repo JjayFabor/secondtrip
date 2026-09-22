@@ -103,7 +103,7 @@ page built as a one-off and everything after it inconsistent with it.
 - `TenantRepository` base (`db/repository.py`); `enable_rls(table)` / `disable_rls(table)`
   migration helpers (`migrations/rls_helpers.py`) applying `ENABLE` + `FORCE` together
 - RFC 9457 problem+json error handlers, cursor pagination, UUIDv7 generation (`uuid6`)
-- `docker-compose.yml` (repo root): `pgvector/pgvector:pg17` on a non-default port, bootstrap
+- `docker-compose.yml` (repo root): `postgres:17` on a non-default port, bootstrap
   SQL mounted into `initdb.d`
 - Root `Makefile` extended with real backend targets; `.github/workflows/backend.yml`
 
@@ -156,12 +156,12 @@ against a live session, propagated to
 - `audit_events` + the audit service (identity actions audited from day one)
 
 **Exit criteria**
-- [ ] Full signup → verify → create org → invite → accept flow works in a browser
-- [ ] Password reset revokes all sessions (tested)
-- [ ] Revoked membership denied on the next request (tested)
-- [ ] Route audit test passes
-- [ ] Permission matrix test passes for all four roles
-- [ ] Last owner cannot be removed or demoted
+- [x] Full signup → verify → create org → invite → accept flow works in a browser
+- [x] Password reset revokes all sessions (tested)
+- [x] Revoked membership denied on the next request (tested)
+- [x] Route audit test passes
+- [x] Permission matrix test passes for all four roles
+- [x] Last owner cannot be removed or demoted
 
 ---
 
@@ -169,8 +169,8 @@ against a live session, propagated to
 
 **Goal:** a real CSV becomes real jobs, idempotently, with a usable error report.
 
-- `background_jobs` + worker loop + registry + scheduler ([09](09-background-jobs.md))
-- `StorageProvider` protocol + R2 and local adapters; presigned upload
+- `background_jobs` + worker loop + registry + direct stale recovery ([09](09-background-jobs.md))
+- `StorageProvider` protocol + local and R2 adapters; presigned upload
 - Operational schema: `source_systems`, `customers`, `locations`, `equipment`, `technicians`,
   `service_categories`, `jobs`, `job_notes`, `job_line_items`
 - Import schema: `import_batches`, `import_rows`, `import_column_mappings`
@@ -184,16 +184,20 @@ against a live session, propagated to
   unrelated pairs
 
 **Exit criteria**
-- [ ] A 50k-row real-shaped CSV imports in under 2 minutes
-- [ ] Re-importing the same file creates 0 new jobs
-- [ ] Interrupt-and-resume produces exactly the right job count
-- [ ] Adversarial CSV corpus produces clean errors, no crashes, no hangs
+- [x] A 50k-row real-shaped CSV imports in under 2 minutes
+- [x] Re-importing the same file creates 0 new jobs
+- [x] Interrupt-and-resume produces exactly the right job count
+- [x] Adversarial CSV corpus produces clean errors, no crashes, no hangs
 - [ ] Error report opens in Excel with no formula execution
-- [ ] Entitlement limits enforced at both create and commit
+- [x] Entitlement limits enforced at both create and commit
 
 Phase 4 is the largest phase and the one most likely to overrun. It is worth the time: every
 subsequent phase consumes its output, and a normalization bug found in Phase 7 invalidates
 everything built in between.
+
+**Production-readiness note:** local and R2 implementations exercise the same protocol, and
+production fails closed unless R2 plus all credentials are configured. A real staging bucket
+smoke test still requires external credentials and is part of the staging deployment checklist.
 
 ---
 
@@ -207,17 +211,14 @@ everything built in between.
 - Scoring calculator (pure), bands, veto/gate handling
 - `candidate_signals` persistence with rendered explanations
 - `detection_runs`, upsert-based re-run semantics
-- `AIProvider` protocol + OpenAI, Null, and Fake adapters
-- `job_embeddings` + backfill job + similarity signal + `similarity_state` handling
 - A CLI: `make detect ORG=...` printing the top 50 candidates with full evidence
 
 **Exit criteria**
-- [ ] On the demo dataset, planted callbacks rank in the top decile
-- [ ] Planted maintenance pairs are suppressed by veto
-- [ ] Planted unrelated pairs score below `min_score_to_surface`
-- [ ] Re-running detection twice preserves candidate IDs
-- [ ] `AI_ENABLED=false` still produces scored candidates
-- [ ] Scoring unit tests pass, including every `NOT_EVALUABLE` case
+- [x] On the demo dataset, planted callbacks rank in the top decile
+- [x] Planted maintenance pairs are suppressed by veto
+- [x] Planted unrelated pairs score below `min_score_to_surface`
+- [x] Re-running detection twice preserves candidate IDs
+- [x] Scoring unit tests pass, including every `NOT_EVALUABLE` case
 - [ ] **Manual review of 50 candidates on a real dataset finds the results plausible**
 
 The last criterion is a judgement call and it is the most important one in this document. If
@@ -239,13 +240,23 @@ tune signals and weights **here** — not to proceed and hope the UI makes them 
 - Audit events for every review action
 - Category/root-cause management UI
 
+**Implementation status (2026-09-22):** category/root-cause persistence and default seeding,
+append-only reviews, supersession history, audit emission, tenant-safe foreign keys, RLS, and
+database-level review write restrictions are complete. Member taxonomy/history reads and the
+manager-only append/reclassification endpoint are also complete. Candidate queue/detail reads
+now return both jobs, the current review, summary signals, and the complete current-run evidence
+set. The first thin UI is also complete: a server-rendered queue, full evidence detail, and a
+role-aware single-candidate review form. It intentionally excludes AI, bulk actions, keyboard
+shortcuts, taxonomy management, cost snapshots, and analytics. Read-only append-only review
+history is now visible on the evidence page; the remaining exclusions stay deferred.
+
 **Exit criteria**
 - [ ] A manager can work a 50-candidate queue end to end using the keyboard
 - [ ] Re-running detection after reviews preserves every review (tested)
 - [ ] Changing the cost model leaves historical snapshots unchanged
 - [ ] Deactivating an in-use category is blocked from deletion and offered as deactivation
-- [ ] Reclassification produces a visible history
-- [ ] Score-band and review-outcome colors follow [22 §3.4](22-design-system.md) exactly — a
+- [x] Reclassification produces a visible history
+- [x] Score-band and review-outcome colors follow [22 §3.4](22-design-system.md) exactly — a
       rejected candidate never renders in the danger color
 
 ---
@@ -301,12 +312,11 @@ tune signals and weights **here** — not to proceed and hope the UI makes them 
 
 | Item | Trigger |
 | --- | --- |
-| **Enable Stage 5 LLM classification** | Once detection quality metrics ([07 §8](07-detection-engine.md)) show where AI narrative adds value |
+| **Reconsider AI or embeddings** | Only when real customer review data demonstrates a specific quality gap that simpler deterministic signals cannot close |
 | Detection quality tuning from aggregate review data | ~500 reviews across customers |
 | TOTP MFA | First customer security questionnaire |
 | Billing (checkout, portal, webhooks) | First customer wanting to pay |
 | Dedicated worker service | Import processing degrades API p95 |
-| Job similarity search + recurring symptom clusters | HNSW + [08 §5](08-ai-and-embeddings.md) mitigations |
 | FSM integrations (ServiceTitan, Jobber, Housecall Pro) | Enough demand to justify per-vendor maintenance. `SourceRecord` boundary already exists |
 | Public API + API keys | `api_access` entitlement demand |
 | "Ask SecondTrip" | Everything above |

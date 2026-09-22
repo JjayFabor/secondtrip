@@ -230,7 +230,7 @@ a re-import preserves.
 | Method | Path | Purpose | Role |
 | --- | --- | --- | --- |
 | GET | `/orgs/{id}/rework` | Review queue. Filters: `min_score`, `band`, `status`, `include_suppressed`, `customer_id`, `equipment_id`, `technician_id`, date range. Sort: `-score`, `-days_between`, `-detected_at` | member |
-| GET | `/orgs/{id}/rework/{cid}` | Candidate + **full signal breakdown** + both job records + AI analysis if present | member |
+| GET | `/orgs/{id}/rework/{cid}` | Candidate + **full signal breakdown** + both job records | member |
 | POST | `/orgs/{id}/rework/{cid}/review` | Confirm / reject / uncertain + category + root cause + note | manager |
 | GET | `/orgs/{id}/rework/{cid}/reviews` | Review history (reclassification chain) | member |
 | POST | `/orgs/{id}/rework/{cid}/unsuppress` | Override a veto | manager |
@@ -243,6 +243,10 @@ a re-import preserves.
 evidence panel in [07 §5](07-detection-engine.md) renders — signals with contributions,
 explanations, and `NOT_EVALUABLE` entries — in one round trip. A UI that has to make four calls
 to explain a score will feel slow exactly where trust is being built.
+
+The queue defaults to `status=open` and excludes suppressed candidates. Its date range applies
+to the follow-up job's `service_date`; cursor order is the selected descending sort key followed
+by candidate ID as the stable tie-breaker.
 
 `POST /rework/manual` matters more than its size suggests: it is how a manager records a
 callback the engine missed, which is the only source of **coverage** data in
@@ -336,7 +340,8 @@ class CandidateSummary(BaseModel):
     band: ScoreBand
     days_between: int
     is_suppressed: bool
-    similarity_state: SimilarityState
+    suppression_reason: CandidateSuppressionReason | None
+    suppressed_by_signal_key: str | None
     workflow_status: CandidateWorkflowStatus
     prior_job: JobSummary
     followup_job: JobSummary
@@ -369,8 +374,10 @@ FastAPI generates the OpenAPI document. CI runs `openapi-typescript` to emit
 one**. That single check is what keeps a monorepo's frontend and backend honest without
 hand-written duplicate types.
 
-Operation IDs are set explicitly (`operation_id="listReworkCandidates"`) so generated client
-names are stable and readable rather than derived from function paths.
+Operation IDs come from one application-wide generator that removes the `_endpoint` suffix and
+converts each route function name to lower camel case (`list_rework_candidates_endpoint` becomes
+`listReworkCandidates`). A regression test enforces uniqueness and readable names. Renaming a
+route function is therefore an intentional contract change.
 
 ---
 

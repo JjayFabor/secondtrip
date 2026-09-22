@@ -1,4 +1,9 @@
-# 08 — AI Architecture & Embeddings
+# 08 — Deferred AI & Embeddings Research
+
+> **Status: deferred and non-binding.** V1 has no AI provider, model calls, embeddings,
+> vector storage, AI configuration, or AI entitlements. Detection is deterministic. Keep this
+> document only as research that may be reconsidered after real customer review data proves a
+> specific quality gap; do not implement it from the current sequencing plan.
 
 **Governing rule:** AI enhances detection. AI does not own the workflow. Every code path that
 touches a provider must have a defined behaviour when that provider returns an error, times

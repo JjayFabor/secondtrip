@@ -17,7 +17,7 @@ Budget: **$0/month at launch.** The goal is not a dashboard suite; it is the abi
 | Product analytics | Plausible (optional) | — |
 
 Database-derived metrics are not a compromise here: queue depth, import throughput, detection
-counts and AI spend all already live in Postgres as first-class rows. Shipping them to a
+counts and review outcomes already live in Postgres as first-class rows. Shipping them to a
 metrics backend to read them back would be the more complicated option, not the simpler one.
 
 ---
@@ -109,9 +109,6 @@ failed batches.
 **Detection** — runs in 24h, pairs evaluated, candidates created, suppression rate, median run
 duration, candidates awaiting review, median time-to-review.
 
-**AI** — requests and cost by model in 24h and month-to-date, p50/p95 latency, error rate,
-invalid-output rate, orgs over budget.
-
 **Business** — active orgs, orgs with ≥1 import, jobs imported in 24h, reviews recorded in 24h,
 confirmation rate by band ([07 §8](07-detection-engine.md)).
 
@@ -125,8 +122,6 @@ format — the queries stay, only the serialization changes.
 | Oldest queued job > 15 min | The worker is dead or wedged — the highest-signal alert in the system |
 | Stale recoveries > 5/hour | Worker crashing or being OOM-killed |
 | Import failure rate > 10% in 24h | Parser regression or a systematically bad export format |
-| AI error rate > 20% in 1h | Provider incident; verify degradation is working |
-| Any org over AI budget | Cost control |
 | `tenant.access_denied` spike | Possible probing |
 | `/health` down 2 min | Standard uptime alert |
 

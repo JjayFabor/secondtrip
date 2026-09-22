@@ -15,9 +15,6 @@ real broker later without touching a single handler.
 | `import.process` | Commit | `import:{batch_id}:process` | 10 |
 | `import.error_report` | Validate/process finished with issues | `import:{batch_id}:report` | 50 |
 | `detection.run` | Import completed, rules changed, manual | `detection:{run_id}` | 20 |
-| `embeddings.backfill` | New/changed job text | `embed:{org_id}:{chunk_id}` | 80 |
-| `detection.rescore` | Embeddings landed | `rescore:{run_id}` | 30 |
-| `ai.classify_candidate` | Gate passed (V1: disabled) | `ai:{candidate_id}:{prompt_version}` | 60 |
 | `analytics.refresh` | Review recorded, import completed | `analytics:{org_id}:{period}` | 70 |
 | `export.generate` | User request | `export:{export_id}` | 40 |
 | `org.purge` | Deletion grace period elapsed | `purge:{org_id}` | 90 |
@@ -26,8 +23,7 @@ real broker later without touching a single handler.
 | `system.prune_import_rows` | Cron, daily | — | 95 |
 | `system.prune_candidate_signals` | Cron, daily | — | 95 |
 
-Lower priority number = runs first. Import work outranks embeddings deliberately: a user is
-watching an import progress bar, and nobody is watching a backfill.
+Lower priority number = runs first.
 
 ---
 
@@ -135,9 +131,8 @@ jitter = random.uniform(0, delay * 0.25)                   # full-ish jitter
 run_at = now() + timedelta(seconds=delay + jitter)
 ```
 
-10 s → 20 s → 40 s → 80 s → 160 s, capped at 1 h, ±25% jitter. Jitter matters because a
-provider outage fails every queued embedding job at nearly the same instant; without it they
-all retry in lockstep and hammer the recovering provider.
+10 s → 20 s → 40 s → 80 s → 160 s, capped at 1 h, ±25% jitter. Jitter prevents many failed
+jobs from retrying in lockstep.
 
 **Non-retryable failures fail immediately**, without consuming attempts: payload validation
 errors, missing referenced entities, entitlement denials, 4xx provider errors. These are
@@ -166,8 +161,6 @@ Three mechanisms, because at-least-once delivery is the only guarantee this desi
    convention and by test ([19 §6](19-testing-strategy.md)):
    - `import.process` — checkpointed `processed_rows` + row-level upserts
    - `detection.run` — candidate upserts on the pair unique key
-   - `embeddings.backfill` — upsert on `(job_id, content_scope, model_key)`
-   - `ai.classify_candidate` — dedup on `input_hash` before dispatch
    - `analytics.refresh` — full recompute of a period, not an increment
 3. **Transactional enqueue** — the `INSERT INTO background_jobs` happens in the *same
    transaction* as the state change that justifies it. If the import batch commits, its job
@@ -223,11 +216,16 @@ code change**, which is the property this design exists to preserve.
 
 ### Scheduling
 
-Cron jobs (`system.sweep_stale_jobs` and friends) are driven by a small internal scheduler in
-the same worker: on each loop iteration, insert any due periodic job whose
-`idempotency_key = f"{job_type}:{minute_bucket}"` does not yet exist. The unique constraint
-makes concurrent workers safe, and there is no external cron dependency. Render Cron Jobs are
-an alternative but cost another service.
+The only periodic operation currently needed is stale-job recovery. The worker runs that sweep
+directly on its polling loop using monotonic elapsed time; it does not enqueue a job whose only
+purpose is to maintain the queue that would execute it. This is the smallest safe design and
+works with concurrent workers because recovery uses row locks.
+
+When a second domain-level periodic operation is introduced, add the small database-backed
+scheduler described by the job model: insert each due job with
+`idempotency_key = f"{job_type}:{minute_bucket}"`. The unique constraint makes concurrent
+workers safe and avoids an external cron dependency. Do not add that abstraction before it has
+two consumers.
 
 ---
 

@@ -23,10 +23,10 @@
                             │           │            │
               ┌─────────────▼──┐  ┌─────▼──────┐  ┌──▼──────────────┐
               │ Neon Postgres  │  │ Cloudflare │  │ Providers        │
-              │ + pgvector     │  │ R2         │  │ • OpenAI (AI)    │
-              │ • operational  │  │ • imports  │  │ • Resend (email) │
-              │ • derived      │  │ • exports  │  │ • (billing: none │
-              │ • queue        │  │ (private)  │  │    yet)          │
+              │                │  │ R2         │  │ • Resend (email) │
+              │ • operational  │  │ • imports  │  │ • billing: none  │
+              │ • derived      │  │ • exports  │  │                  │
+              │ • queue        │  │ (private)  │  │                  │
               └────────────────┘  └────────────┘  └──────────────────┘
 ```
 
@@ -82,7 +82,7 @@ services performs two transactions; if that is wrong, the operation belongs in o
 method. This keeps transaction scope legible and avoids a request-scoped `UnitOfWork` that
 quietly holds a connection across an outbound HTTP call.
 
-**Rule:** never hold a database transaction open across a provider call (AI, email, storage).
+**Rule:** never hold a database transaction open across a provider call (email or storage).
 Commit, then call, then record the outcome in a second transaction.
 
 ### 3.2 Asynchronous processing path
@@ -115,21 +115,15 @@ processing job committed with it; if it rolled back, so did the job.
    ▼  import.process        raw rows → normalize → upsert customers/locations/equipment/jobs
    │
    ▼  detection.generate    Stage 1: blocked candidate generation
-   ▼  detection.score       Stage 2 + 4: deterministic signals → explainable score
-   ▼  embeddings.backfill   Stage 3: embed new job text (async, non-blocking)
-   ▼  detection.rescore     re-score with similarity signal once embeddings land
-   ▼  [ai.classify]         Stage 5: feature-flagged off in V1
+   ▼  detection.score       Stage 2: deterministic signals → explainable score
    │
-   ▼  Human review          Stage 6: confirm / reject / categorise → layer-4 truth
+   ▼  Human review          Stage 3: confirm / reject / categorise → layer-4 truth
    │
    ▼  analytics.refresh     root-cause + cost rollups
 ```
 
-Note the **two-pass scoring**: candidates are scored immediately on deterministic signals so
-the user sees results within seconds of an import finishing, then re-scored when embeddings
-complete. A user never waits on the embedding provider to see their first findings. This also
-means the similarity signal's absence must be a *first-class state* (`unavailable`), distinct
-from "computed, and it was low" — see [07-detection-engine.md §4](07-detection-engine.md).
+Detection is one deterministic pass. Results are reproducible and do not depend on an external
+provider.
 
 ---
 
@@ -175,14 +169,13 @@ by `jobs` (`jobs/read_models.py`) that `detection` may use. Writes still go thro
 | --- | --- | --- |
 | Frontend | Next.js (App Router) + TypeScript | Marketing pages need static generation and metadata control; the app needs server-side auth checks. Same framework for both avoids a second stack. |
 | Styling | Tailwind CSS + a small component set (shadcn-style, vendored) | Vendored, not a dependency-heavy UI kit. Keeps the design under our control. |
-| Backend | FastAPI + Pydantic v2 | Pydantic v2 gives us request validation *and* AI structured-output validation from the same models. |
+| Backend | FastAPI + Pydantic v2 | Request and response validation with one typed model layer. |
 | ORM | SQLAlchemy 2.x async + Alembic | Async matters because the workload is I/O-bound (Neon over the network, provider calls). |
-| DB | Neon Postgres + `pgvector` | Scale-to-zero pricing matches an idle side project. |
+| DB | Neon Postgres | Scale-to-zero pricing matches an idle side project. |
 | Driver | `asyncpg` via `postgresql+asyncpg://` | |
 | Storage | Cloudflare R2 via S3-compatible API (`aioboto3`) | Zero egress fees. |
 | Email | Resend behind `EmailProvider` | |
 | Deploy | Vercel (frontend), Render (API) | |
-| AI | OpenAI behind `AIProvider` | |
 
 ### Neon-specific constraints implementers must respect
 
@@ -202,16 +195,22 @@ by `jobs` (`jobs/read_models.py`) that `detection` may use. Writes still go thro
 
 ## 7. Cost model at launch
 
+> **2026-09-22 pricing correction:** Vercel Hobby is restricted to non-commercial use, so it is
+> not a valid plan for a commercial SecondTrip launch. Render has also changed compute names and
+> pricing since this estimate was written. Treat the table below as the original sizing intent,
+> not a current quote; verify vendor pricing and use an eligible commercial frontend plan before
+> production. The required resources and launch gates are maintained in
+> [`docs/runbooks/production-launch.md`](../runbooks/production-launch.md).
+
 | Item | Plan | Monthly |
 | --- | --- | --- |
-| Vercel | Hobby | $0 |
+| Vercel | Commercial-eligible plan | Verify current pricing |
 | Render | Starter web service (avoids sleep-on-idle) | ~$7 |
 | Neon | Free tier initially | $0 |
 | Cloudflare R2 | Free tier (10 GB, no egress fees) | $0 |
 | Resend | Free tier (3k emails/mo) | $0 |
 | Sentry | Developer tier | $0 |
-| OpenAI embeddings | ~$0.02 per 1M tokens (`text-embedding-3-small`); 100k jobs ≈ 15M tokens | ~$0.30 one-off |
-| **Total** | | **~$7/month** |
+| **Total** | | **Verify before launch** |
 
 The single largest avoidable cost would be a dedicated Render Background Worker (+$7/mo).
 V1 therefore runs the worker **in-process** in the API service, guarded by `WORKER_ENABLED`.
@@ -229,6 +228,6 @@ service is a config change, not a refactor.
 | --- | --- |
 | Import processing regularly delays API p95 beyond 500 ms | Split the worker into a dedicated Render Background Worker (`WORKER_ENABLED=false` on the API) |
 | Sustained > 5 queued jobs/sec, or need for fan-out/chaining | Move to Redis + Dramatiq; keep handler signatures identical |
-| A single org exceeds ~1M jobs | Partition `jobs` and `job_embeddings` by `organization_id` hash; see [04-data-model.md §15](04-data-model.md) |
+| A single org exceeds ~1M jobs | Partition `jobs` by `organization_id` hash; see [04-data-model.md §15](04-data-model.md) |
 | Vector similarity search (not pairwise) becomes a core feature | Add HNSW index; evaluate `hnsw.iterative_scan` for the org-filter recall problem |
 | Multi-region latency complaints | Neon read replica + Render region pinning, not a rewrite |

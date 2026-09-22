@@ -44,7 +44,7 @@ implementer needs this mapping:
 | --- | --- |
 | **1 — Source/raw** (immutable evidence) | `import_batches` (file metadata + R2 key), `import_rows.raw_data` |
 | **2 — Normalized operational** (rebuildable from layer 1) | `customers`, `locations`, `equipment`, `technicians`, `jobs`, `job_notes`, `job_line_items`, `service_categories` |
-| **3 — Derived analytical** (safe to wipe and recompute) | `detection_runs`, `rework_candidates`*, `candidate_signals`, `candidate_score_history`, `job_embeddings`, `ai_analyses`, analytics rollups |
+| **3 — Derived analytical** (safe to wipe and recompute) | `detection_runs`, `rework_candidates`*, `candidate_signals`, `candidate_score_history`, analytics rollups |
 | **4 — Human-confirmed truth** (never machine-written) | `rework_reviews`, `rework_categories`, `root_causes`, `rework_cost_snapshots` |
 
 \* `rework_candidates` is a hybrid: the **row identity** (the job pair) is stable and must
@@ -368,7 +368,6 @@ two different FSM exports may both use `JOB-1001` for different jobs.
 | `warranty_reference` | text NULL | claim number |
 | `extra_fields` | jsonb NOT NULL DEFAULT `'{}'` | unmapped columns the org chose to retain |
 | `search_document` | tsvector GENERATED ALWAYS AS (...) STORED | over summary/description/symptoms/diagnosis/resolution |
-| `embedding_content_hash` | bytea NULL | detects when text changed and re-embedding is needed |
 | `created_at` / `updated_at` / `deleted_at` | | |
 
 **`service_date` is NOT NULL** and is the anchor for candidate generation. When a source
@@ -390,13 +389,10 @@ Indexes:
 | `(organization_id, technician_id, service_date)` | technician analytics |
 | `(organization_id, last_import_batch_id)` | import rollback/delete |
 | `GIN (search_document)` | full-text search |
-| `(organization_id, embedding_content_hash) WHERE deleted_at IS NULL` | embedding backfill selection |
 
 ### `job_notes`
 
-Separate from `jobs` because notes are 1-to-many, are the richest text for embeddings, and are
-the highest-risk content for prompt injection (see
-[11-security-threat-model.md §9](11-security-threat-model.md)).
+Separate from `jobs` because notes are 1-to-many and should not duplicate the job row.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -450,7 +446,6 @@ with the signal registry in `detection/signals/`.
 | `default_weight` | numeric(8,2) NOT NULL |
 | `default_params` | jsonb NOT NULL DEFAULT `'{}'` |
 | `supported_kinds` | text[] NOT NULL — which rule kinds are legal for this signal |
-| `requires_embeddings` | boolean NOT NULL DEFAULT false |
 | `is_active` | boolean NOT NULL DEFAULT true |
 
 ### `detection_rule_sets` — immutable versions
@@ -466,8 +461,6 @@ Collapsed from a parent/version pair: each row **is** a version. One active per 
 | `is_active` | boolean NOT NULL DEFAULT false | |
 | `window_days` | int NOT NULL DEFAULT 30 | the outer candidate-generation window |
 | `min_score_to_surface` | numeric(5,2) NOT NULL DEFAULT 40 | below this, stored but hidden by default |
-| `min_score_for_ai` | numeric(5,2) NOT NULL DEFAULT 65 | Stage 5 gate |
-| `similarity_threshold` | numeric(4,3) NOT NULL DEFAULT 0.780 | cosine floor for the similarity signal |
 | `max_followups_per_job` | int NOT NULL DEFAULT 25 | fan-out guard, §6 of [07](07-detection-engine.md) |
 | `notes` | text NULL | |
 | `created_by_user_id` | uuid NULL FK → users `ON DELETE SET NULL` | |
@@ -515,7 +508,7 @@ model cannot express that cleanly.
 | `id` | uuid PK | |
 | `organization_id` | uuid NOT NULL | |
 | `rule_set_id` | uuid NOT NULL FK → detection_rule_sets | the version used |
-| `trigger` | enum `detection_trigger` | `import_completed`, `rules_changed`, `manual`, `scheduled`, `embeddings_ready` |
+| `trigger` | enum `detection_trigger` | `import_completed`, `rules_changed`, `manual`, `scheduled` |
 | `scope` | jsonb NOT NULL DEFAULT `'{}'` | e.g. `{"import_batch_id": "...", "from": "2026-01-01"}` |
 | `status` | enum `run_status` | `queued`, `running`, `completed`, `failed`, `cancelled` |
 | `pairs_evaluated` | bigint NOT NULL DEFAULT 0 | |
@@ -525,6 +518,7 @@ model cannot express that cleanly.
 | `background_job_id` | uuid NULL FK → background_jobs `ON DELETE SET NULL` | |
 | `started_at` / `completed_at` | timestamptz NULL | |
 | `error_message` | text NULL | |
+| `created_at` / `updated_at` | timestamptz NOT NULL | mutable run lifecycle timestamps |
 
 Index `(organization_id, started_at DESC)`.
 
@@ -542,10 +536,9 @@ Index `(organization_id, started_at DESC)`.
 | `current_score` | numeric(6,2) NULL | raw |
 | `current_normalized_score` | numeric(5,2) NULL | 0–100 |
 | `score_band` | enum `score_band` NULL | `low`, `medium`, `high` |
-| `is_suppressed` | boolean NOT NULL DEFAULT false | a `veto` rule fired |
-| `suppressed_by_signal_key` | text NULL | |
-| `similarity_state` | enum `similarity_state` NOT NULL DEFAULT `'pending'` | `pending`, `computed`, `unavailable`, `not_applicable` |
-| `similarity_score` | numeric(4,3) NULL | |
+| `is_suppressed` | boolean NOT NULL DEFAULT false | hidden from the active review queue |
+| `suppression_reason` | enum `candidate_suppression_reason` NULL | `signal_veto`, `out_of_window` |
+| `suppressed_by_signal_key` | text NULL | required only for `signal_veto` |
 | `workflow_status` | enum `candidate_workflow_status` NOT NULL DEFAULT `'open'` | `open`, `in_review`, `reviewed`, `dismissed` |
 | `current_rule_set_id` | uuid NULL FK → detection_rule_sets `ON DELETE SET NULL` | |
 | `current_detection_run_id` | uuid NULL FK → detection_runs `ON DELETE SET NULL` | |
@@ -557,6 +550,8 @@ Constraints:
 
 - `UNIQUE (organization_id, prior_job_id, followup_job_id)` ← **the upsert target**
 - `CHECK (prior_job_id <> followup_job_id)`
+- suppression state is internally consistent: unsuppressed rows have no reason/key; a
+  `signal_veto` has a signal key; `out_of_window` has no signal key
 - `UNIQUE (organization_id, id)`
 - Composite FKs guaranteeing both jobs belong to the same org as the candidate:
   ```sql
@@ -595,7 +590,7 @@ Indexes:
 | `detection_run_id` | uuid NOT NULL FK → detection_runs `ON DELETE CASCADE` | |
 | `signal_key` | text NOT NULL | |
 | `rule_kind` | enum `rule_kind` NOT NULL | |
-| `matched` | boolean NOT NULL | did the signal fire |
+| `outcome` | enum `signal_outcome` NOT NULL | `matched`, `not_matched`, `not_evaluable` |
 | `strength` | numeric(5,4) NOT NULL DEFAULT 1 | 0–1; lets a band/ratio contribute partially |
 | `raw_value` | jsonb NULL | `{"days": 8}`, `{"cosine": 0.89}`, `{"serial": "match"}` |
 | `weight_applied` | numeric(8,2) NOT NULL | the weight from the rule set version |
@@ -606,9 +601,11 @@ Indexes:
 - `UNIQUE (candidate_id, detection_run_id, signal_key)`
 - Index `(organization_id, detection_run_id)` for bulk cleanup.
 
-**Non-matching signals are stored too.** "Different technician — no contribution" is
-informative to a reviewer and costs one small row. The UI renders matched signals prominently
-and unmatched ones on demand.
+**Non-matching and non-evaluable signals are stored too.** "Different technician — no
+contribution" is informative to a reviewer, while "No equipment recorded — not evaluable"
+explains why a configured weight was excluded from the denominator. A boolean `matched` column
+would collapse those distinct states and is therefore deliberately not used. The UI renders
+matched signals prominently and the other outcomes on demand.
 
 **Retention:** keep signals for the **current** run of each candidate plus the two most recent
 prior runs; a cleanup job deletes older ones. Unbounded retention would make this the largest
@@ -683,7 +680,7 @@ Seeded defaults:
 | `id` | uuid PK | |
 | `organization_id` | uuid NOT NULL | |
 | `key` / `label` | text NOT NULL | |
-| `parent_id` | uuid NULL FK → root_causes `ON DELETE SET NULL` | one nesting level |
+| `parent_id` | uuid NULL FK → root_causes `ON DELETE RESTRICT` | one nesting level; deactivate instead of deleting |
 | `is_system_default` / `is_active` | boolean | |
 | `sort_order` | int | |
 
@@ -705,7 +702,6 @@ Seeded defaults:
 | `reviewed_by_user_id` | uuid NOT NULL FK → users `ON DELETE RESTRICT` | |
 | `score_at_review` | numeric(5,2) NULL | what the machine said at decision time |
 | `rule_set_id_at_review` | uuid NULL | |
-| `ai_analysis_id_at_review` | uuid NULL FK → ai_analyses `ON DELETE SET NULL` | to measure human/AI agreement |
 | `decided_at` | timestamptz NOT NULL | |
 | `superseded_by_review_id` | uuid NULL FK → rework_reviews `ON DELETE SET NULL` | reclassification chain |
 | `created_at` | timestamptz NOT NULL | |
@@ -723,8 +719,12 @@ Rows are **never updated** except to set `superseded_by_review_id`. Changing a c
 inserts a new row and links the old one. Reclassification history is a product feature (§21 of
 the brief) and an audit requirement.
 
-`score_at_review` deserves note: it freezes what the model claimed at the moment a human
-disagreed with it. That column is the entire basis for measuring detection quality later.
+The application database role has `INSERT` and column-level
+`UPDATE (superseded_by_review_id)` only; it has no review `DELETE` or general `UPDATE`
+privilege. Append-only behavior is therefore a database rule, not only a service convention.
+
+`score_at_review` freezes what the deterministic detector reported when the human decided.
+That column is the basis for measuring detection quality later.
 
 ### `rework_cost_snapshots`
 
@@ -788,7 +788,11 @@ All arithmetic in `Decimal`, rounded once at the end with `ROUND_HALF_UP` to 2 d
 
 ---
 
-## 9. AI tables
+## 9. Deferred AI data-model research (not V1 tables)
+
+> The structures below are retained only as non-binding research. They are not present in the
+> V1 schema and must not be implemented unless the trigger in
+> [21 §Deferred](21-implementation-sequencing.md) is met.
 
 ### `job_embeddings`
 
@@ -880,6 +884,7 @@ PK `(organization_id, usage_date, provider, model_key, operation)`. Upserted wit
 | `encoding` / `delimiter` / `has_header` | text / char(1) / boolean | detected at profiling |
 | `detected_columns` | jsonb NULL | `[{index,name,sample_values,inferred_type}]` |
 | `sample_rows` | jsonb NULL | first ~20 rows for the preview UI |
+| `profile_issues` | jsonb NOT NULL DEFAULT `[]` | encoding/dialect and sampled-shape warnings shown in preview |
 | `mapping` | jsonb NULL | the applied `ColumnMapping` snapshot (frozen at commit) |
 | `template_id` | uuid NULL FK → import_column_mappings `ON DELETE SET NULL` | |
 | `total_rows` / `processed_rows` | int | checkpointed for resume + progress UI |
@@ -910,8 +915,9 @@ Every single row of every file lands here. **Nothing is silently discarded.**
 | `import_batch_id` | uuid NOT NULL FK → import_batches `ON DELETE CASCADE` | |
 | `row_number` | int NOT NULL | 1-based, counting the header as row 1 |
 | `raw_data` | jsonb NOT NULL | the row exactly as parsed — **layer 1, immutable** |
+| `normalized_data` | jsonb NULL | validated source-neutral `SourceRecord`; avoids re-normalizing during commit |
 | `row_hash` | bytea NOT NULL | sha256 of `raw_data`, for in-file duplicate detection |
-| `status` | enum `import_row_status` NOT NULL | `pending`, `imported`, `updated`, `skipped_duplicate`, `warning`, `error` |
+| `status` | enum `import_row_status` NOT NULL | `pending`, `imported`, `updated`, `skipped_duplicate`, `skipped_filtered`, `warning`, `error` |
 | `issues` | jsonb NOT NULL DEFAULT `'[]'` | `[{code, field, message, severity, raw_value}]` |
 | `job_id` | uuid NULL FK → jobs `ON DELETE SET NULL` | what it produced |
 | `created_at` | timestamptz NOT NULL | |
@@ -919,6 +925,7 @@ Every single row of every file lands here. **Nothing is silently discarded.**
 - `UNIQUE (import_batch_id, row_number)`
 - Index `(import_batch_id, status)` — drives the error report and the "show me failed rows" UI.
 - Index `(organization_id, import_batch_id)`.
+- Index `(organization_id, job_id)` — supports linked-row lookup and bounded tenant cleanup.
 
 **Retention (important — this is the table that grows fastest):** 250k rows × a JSONB payload
 is easily 500 MB per large import. Policy: after **90 days**, a maintenance job nulls
@@ -1064,7 +1071,7 @@ retrying a delivery cannot double-apply it.
 | `users` → `*.created_by_user_id` | `SET NULL` | |
 | `import_batches` → `import_rows` | `CASCADE` | |
 | `import_batches` → `jobs.last_import_batch_id` | `SET NULL` | Deleting an import must not delete jobs another import also touched — see below |
-| `jobs` → `job_notes`, `job_line_items`, `job_embeddings` | `CASCADE` | |
+| `jobs` → `job_notes`, `job_line_items` | `CASCADE` | |
 | `jobs` → `rework_candidates` (composite FK) | `CASCADE` | A candidate without both jobs is meaningless |
 | `rework_candidates` → `candidate_signals`, `score_history`, `rework_reviews`, `cost_snapshots` | `CASCADE` | |
 | `rework_categories` / `root_causes` → `rework_reviews` | **`RESTRICT`** | Deactivate, never delete, a category in use |
@@ -1123,8 +1130,6 @@ Designed for ≤100k jobs/org. The upgrade path, so it stays a migration rather 
 | `jobs` table > ~5M rows total | `PARTITION BY HASH (organization_id)` — the composite unique keys already lead with `organization_id`, so partitioning is compatible without redesign |
 | Candidate generation slow | It is already blocked by `(organization_id, customer_id, service_date)`. Next step: generate incrementally for the import's date range only (already the default scope), then narrow blocking to `equipment_id` when present |
 | `candidate_signals` dominant table | Already bounded by the 3-run retention policy; tighten to 1 run, or move the explanation text to a generated view |
-| `job_embeddings` memory | Switch `vector(768)` → `halfvec(768)` (2 bytes/dim, ~50% saving, negligible recall loss); partition by org |
-| Vector *search* becomes a feature | Add HNSW; adopt `hnsw.iterative_scan = relaxed_order` for the org-filter recall problem ([08 §5](08-ai-and-embeddings.md)) |
 | `import_rows` bloat | Already mitigated by the 90-day `raw_data` nulling policy |
 
 None of these require changing a primary key, a foreign key, or a domain service. That is the

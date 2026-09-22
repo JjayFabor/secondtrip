@@ -38,7 +38,6 @@ Legend — **R** required · **O** optional · **D** development only · **P** p
 - `APP_ENV=production` ⇒ `DEBUG=false`, `APP_URL`/`FRONTEND_URL` are `https`, `APP_SECRET` is
   not the development default, `COOKIE_SECURE=true`.
 - `CORS_ALLOWED_ORIGINS` contains no wildcard while credentials are enabled.
-- Every model named in `AI_*` settings has a row in the pricing table.
 
 A misconfigured production boot should crash loudly, not serve insecurely.
 
@@ -88,10 +87,10 @@ produce intermittent "prepared statement already exists" errors under load.
 | --- | :---: | --- | --- |
 | `STORAGE_PROVIDER` | O | `r2` | `r2` · `local` (dev) · `memory` (tests) |
 | `STORAGE_BUCKET` | R | — | Per environment; never shared |
-| `STORAGE_ENDPOINT_URL` | R | — | `https://<account>.r2.cloudflarestorage.com` |
+| `STORAGE_ENDPOINT_URL` | R | — | `https://<account>.r2.cloudflarestorage.com`; HTTPS required outside local development |
 | `STORAGE_ACCESS_KEY_ID` | R | — | Secret |
 | `STORAGE_SECRET_ACCESS_KEY` | R | — | Secret |
-| `STORAGE_REGION` | O | `auto` | |
+| `STORAGE_REGION` | O | `auto` | R2 requires `auto`; other values fail startup |
 | `STORAGE_SIGNED_URL_TTL_SECONDS` | O | `300` | Downloads |
 | `STORAGE_UPLOAD_URL_TTL_SECONDS` | O | `900` | Uploads |
 | `STORAGE_LOCAL_PATH` | D | `./.storage` | |
@@ -114,27 +113,7 @@ put a real API key in a developer `.env`.
 
 ---
 
-## 6. AI
-
-| Variable | | Default | Notes |
-| --- | :---: | --- | --- |
-| `AI_ENABLED` | O | `true` | `false` wires `NullAIProvider` — the global kill switch |
-| `AI_PROVIDER` | O | `openai` | |
-| `AI_API_KEY` | R if enabled | — | Secret |
-| `AI_EMBEDDING_MODEL` | O | `text-embedding-3-small` | |
-| `AI_EMBEDDING_DIMENSIONS` | O | `768` | **Changing this requires a full re-embed** — it is part of `model_key` |
-| `AI_CLASSIFICATION_ENABLED` | O | **`false`** | Stage 5 kill switch; off in V1 |
-| `AI_CLASSIFICATION_MODEL` | O | — | Must exist in the pricing table |
-| `AI_REQUEST_TIMEOUT_SECONDS` | O | `30` | |
-| `AI_MAX_RETRIES` | O | `3` | |
-| `AI_MAX_CONCURRENCY` | O | `4` | |
-| `AI_EMBEDDING_BATCH_SIZE` | O | `256` | |
-| `AI_ZERO_RETENTION` | O | `true` | Asserts the provider account is configured for zero retention — operational prerequisite, not code-enforced |
-| `AI_REDACTION_ENABLED` | O | `true` | Disabling requires an explicit, documented decision |
-
----
-
-## 7. Background worker
+## 6. Background worker
 
 | Variable | | Default | Notes |
 | --- | :---: | --- | --- |
@@ -150,7 +129,7 @@ put a real API key in a developer `.env`.
 
 ---
 
-## 8. Imports & detection defaults
+## 7. Imports & detection defaults
 
 These are **defaults for new organizations**, not runtime limits — an org's own settings, once
 created, live in the database and are not affected by changing these.
@@ -164,13 +143,11 @@ created, live in the database and are not affected by changing these.
 | `IMPORT_MAX_COLUMNS` | O | `200` |
 | `DETECTION_DEFAULT_WINDOW_DAYS` | O | `30` |
 | `DETECTION_DEFAULT_MIN_SCORE_TO_SURFACE` | O | `40` |
-| `DETECTION_DEFAULT_MIN_SCORE_FOR_AI` | O | `65` |
-| `DETECTION_DEFAULT_SIMILARITY_THRESHOLD` | O | `0.78` |
 | `DETECTION_MAX_FOLLOWUPS_PER_JOB` | O | `25` |
 
 ---
 
-## 9. Observability & billing
+## 8. Observability & billing
 
 | Variable | | Default | Notes |
 | --- | :---: | --- | --- |
@@ -185,7 +162,7 @@ created, live in the database and are not affected by changing these.
 
 ---
 
-## 10. Frontend
+## 9. Frontend
 
 | Variable | | Notes |
 | --- | :---: | --- |
@@ -203,12 +180,12 @@ unrecoverable by rotation alone.
 
 ---
 
-## 11. Secrets summary
+## 10. Secrets summary
 
 Marked secret; never committed, never logged, never in `NEXT_PUBLIC_*`:
 
 `APP_SECRET`, `DATABASE_URL`, `DATABASE_URL_MIGRATIONS`, `STORAGE_ACCESS_KEY_ID`,
-`STORAGE_SECRET_ACCESS_KEY`, `EMAIL_API_KEY`, `AI_API_KEY`, `BILLING_API_KEY`,
+`STORAGE_SECRET_ACCESS_KEY`, `EMAIL_API_KEY`, `BILLING_API_KEY`,
 `BILLING_WEBHOOK_SECRET`.
 
 `.env.example` lists every variable above with placeholder values and a one-line comment. It is
@@ -216,7 +193,7 @@ committed; `.env` is git-ignored and covered by gitleaks.
 
 ---
 
-## 12. Per-environment matrix
+## 11. Per-environment matrix
 
 | | local | ci | staging | production |
 | --- | --- | --- | --- | --- |
@@ -225,14 +202,8 @@ committed; `.env` is git-ignored and covered by gitleaks.
 | `COOKIE_SECURE` | `false` | `false` | `true` | `true` |
 | `STORAGE_PROVIDER` | `local` | `memory` | `r2` | `r2` |
 | `EMAIL_PROVIDER` | `console` | `memory` | `resend` | `resend` |
-| `AI_ENABLED` | `false` | `false` | `true` | `true` |
-| `AI_CLASSIFICATION_ENABLED` | `false` | `false` | `true` | `false` (V1) |
 | `WORKER_ENABLED` | `true` | `false` | `true` | `true` |
 | `SENTRY_DSN` | unset | unset | set | set |
 | `RATE_LIMIT_ENABLED` | `false` | `true` | `true` | `true` |
-
-`AI_ENABLED=false` locally by default so a developer cannot accidentally spend real money in a
-loop, and so the degraded path ([08 §3](08-ai-and-embeddings.md)) is the one exercised daily —
-which is the most reliable way to keep it working.
 
 `RATE_LIMIT_ENABLED=true` in CI specifically so the rate-limit tests are meaningful.

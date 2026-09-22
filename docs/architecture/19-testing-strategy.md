@@ -24,11 +24,11 @@ Inverted pyramid warnings do not apply cleanly here: the riskiest logic in this 
 touching tenancy runs against a real database, because the isolation guarantees are partly
 enforced *by* the database.
 
-**No mocked database.** Tests run against a real Postgres with pgvector, RLS policies applied,
+**No mocked database.** Tests run against a real Postgres with RLS policies applied,
 and the same non-owner app role as production. A mocked repository cannot prove RLS works, and
 RLS is one of the three isolation layers.
 
-**No mocked providers at the integration level** — use `FakeAIProvider`, `InMemoryStorage`,
+**No mocked providers at the integration level** — use `InMemoryStorage` and
 `MemoryEmailProvider`. These are real implementations of the protocol, so they exercise the
 same call sites rather than a `MagicMock` that accepts anything.
 
@@ -165,23 +165,6 @@ file · a header-only file · duplicate header names · BIDI override characters
 The two "re-run preserves reviews" tests protect the single most valuable data in the product.
 They should be among the first tests written.
 
-### Semantic similarity
-
-Deterministic `FakeAIProvider` embeddings (hash-derived) so cosine values are reproducible.
-Assert: signal contributes above threshold; `NOT_EVALUABLE` when either embedding is missing;
-`similarity_state` transitions correctly; provider failure leaves `unavailable` and does not
-depress the score; vectors from different `model_key`s are never compared.
-
-### AI structured output
-
-Valid response parses · missing field rejected · extra field rejected (`extra="forbid"`) ·
-out-of-range confidence rejected · invented classification value rejected · malformed JSON
-retried once then recorded as `invalid_output` · **a prompt-injection payload in a job note
-cannot alter workflow state, score, or review** · dedup on `input_hash` prevents a second
-provider call.
-
----
-
 ## 5. Cost calculation
 
 Pure, and it produces the number customers make decisions with.
@@ -251,10 +234,20 @@ signed URL TTL respected · export contains only the requesting org's rows.
 
 ### Architecture conformance (fast, run on every commit)
 
-`import-linter` contracts pass · `openai` imported only under `providers/ai/openai/` ·
-`boto3` only under `providers/storage/r2/` · no `os.environ` outside `core/settings.py` · no
+`import-linter` contracts pass · `boto3` only under `providers/storage/r2/` · no `os.environ`
+outside `core/settings.py` · no
 `dangerouslySetInnerHTML` (ESLint) · no `float` in money paths (mypy + a grep test) ·
 signal registry matches `detection_signal_definitions`.
+
+### Import performance release gate
+
+Wall-clock timing is deliberately not asserted by pytest or CI runners with variable resources.
+Before an ingestion release, `make perf-import` generates the versioned HVAC fixture and measures
+object verification, profiling, full validation, commit, and operational processing through real
+Postgres, RLS, the queue, and the production handler registry. The browser-to-object-store upload
+is outside the boundary. Release evidence is three isolated 50,000-row runs, each with exact
+cardinalities and total server-side time below 120 seconds; raw JSON remains an uncommitted local
+artifact.
 
 ### Contract
 
@@ -274,7 +267,6 @@ Stated explicitly so nobody adds these later believing they were an oversight:
 | React component rendering snapshots | Brittle, churns on every style change, catches nothing |
 | Third-party SDK behaviour | Their tests; we test our **adapter's** mapping |
 | Every permutation of every filter | One representative per filter type |
-| Exact AI model output quality | Non-deterministic. We test **schema validation and failure handling**, not whether the model is right |
 | Getter endpoints with no authorization nuance | Covered by the parameterized tenant matrix |
 | Migration up/down round-trips for every revision | One "migrate from scratch, then from the previous release" check in CI is sufficient |
 

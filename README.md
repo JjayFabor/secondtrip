@@ -8,7 +8,23 @@ business-impact analytics.
 Not a field-service management system. An intelligence layer on top of the one you already
 have.
 
-**Status:** Phase 0 complete — architecture and technical specification. No implementation yet.
+**Status:** Phase 6 now includes the deterministic review queue, complete evidence detail,
+single-candidate classification, and visible append-only review history. Literal Microsoft Excel
+verification, manual review on a real dataset, and the production launch gates in
+[`docs/runbooks/production-launch.md`](docs/runbooks/production-launch.md) remain open.
+
+## Local demo and import performance gate
+
+With local Postgres available, `make seed-demo` installs 96 entirely fictional HVAC jobs through
+the production import lifecycle. The dataset contains labelled callback, maintenance,
+planned-multivisit, unrelated, and standalone scenarios for detection development. Re-running the
+command is a verified no-op when the fixture is current. Set `RESET=1` to rebuild only the reserved
+demo tenant, or `DEMO_PASSWORD=...` to choose its local password; neither value is printed.
+
+`make perf-import` generates (but does not commit) a deterministic real-shaped 50,000-row CSV and
+runs the real RLS/storage/queue/profile/validate/process path against an isolated Pro tenant. It
+fails unless counts are exact and server-side wall time is below 120 seconds. `ROWS`, `RUNS`, and
+`WARMUP` can be overridden for development.
 
 ---
 
@@ -45,25 +61,22 @@ what the product accumulates.**
 CSV upload → validate → normalize → import
            → candidate generation (blocked, not N²)
            → deterministic signals
-           → semantic similarity (pgvector)
            → explainable composite score
-           → [optional AI classification]
            → human review
            → root-cause & cost analytics
 ```
 
-The detection engine works with the AI provider switched off. AI enhances detection; it does
-not own the workflow.
+The detection engine is deterministic and every score is backed by visible evidence.
 
 ---
 
 ## Stack
 
 Next.js · TypeScript · FastAPI · Pydantic v2 · SQLAlchemy async · Alembic · PostgreSQL
-(Neon) + pgvector · Cloudflare R2 · Resend · Vercel + Render
+(Neon) · Cloudflare R2 · Resend · Vercel + Render
 
-Modular monolith. Postgres is also the job queue and the vector store. Roughly $7/month at
-launch.
+Modular monolith. Postgres is also the job queue. Verify current vendor pricing before launch;
+commercial Vercel deployments cannot use the non-commercial Hobby plan.
 
 ---
 

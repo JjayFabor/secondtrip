@@ -34,9 +34,11 @@ Client Component  →  direct fetch (credentials: "include")     →  interactiv
   not flash a skeleton before its first row.
 - **Interactions** (filtering, paging, polling an import) go straight from the browser to the
   API, skipping a pointless Next.js hop.
-- `lib/api-client.ts` is one typed wrapper over `packages/contracts`, handling cookie
-  forwarding, `X-Request-Id`, CSRF headers, and problem+json error mapping. Nothing calls
-  `fetch` directly.
+- `lib/api.ts` is the browser transport over `packages/contracts`; it sends credentials,
+  handles CSRF, and maps problem+json errors. `lib/api-server.ts` is its server-only read
+  counterpart: it forwards the incoming cookie and request ID to `API_INTERNAL_URL`, forces
+  `no-store`, and redirects an expired session to login. Components call these boundaries,
+  never `fetch` directly.
 - Import progress polls `GET /imports/{id}` every 2 s while processing. Websockets would be a
   meaningful cost (a persistent connection per user on a $7 instance) for a marginal gain.
 
@@ -64,8 +66,6 @@ Requirements:
   rather than sold.
 - Both job records **side by side**, with the fields that drove the score highlighted.
 - Score arithmetic shown, not just the total: `120 / 130 → 92`.
-- AI analysis, when present, visually distinct and explicitly labelled a suggestion — never
-  adjacent to the deterministic evidence in a way that implies equal standing.
 - Decision controls (confirm / reject / uncertain + category + root cause) reachable without
   scrolling past the evidence.
 - Keyboard navigation: `J`/`K` between candidates, `C`/`R` to confirm/reject. A manager working

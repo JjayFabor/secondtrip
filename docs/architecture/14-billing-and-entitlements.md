@@ -33,23 +33,12 @@ if sub.status != "active": ...
 | `imports_per_month` | limit | 3 | 50 | unlimited | month |
 | `concurrent_imports` | limit | 1 | 2 | 3 | concurrent |
 | `team_members` | limit | 2 | 10 | unlimited | total |
-| `ai_analyses` | limit | 0 | 500 | 5,000 | month |
-| `ai_spend_cents` | limit | 0 | 500 | 5,000 | month |
-| `embeddings_enabled` | boolean | ✅ | ✅ | ✅ | — |
 | `exports_enabled` | boolean | ✅ | ✅ | ✅ | — |
 | `exports_per_month` | limit | 5 | 100 | unlimited | month |
 | `api_access` | boolean | ❌ | ❌ | ✅ | — |
 | `integrations` | boolean | ❌ | ❌ | ✅ | — |
 | `custom_detection_rules` | boolean | ❌ | ✅ | ✅ | — |
 | `audit_retention_months` | limit | 3 | 24 | 84 | total |
-
-`embeddings_enabled` is ✅ on free deliberately: semantic similarity is what makes the free
-tier's results good enough to convert. The AI *classification* budget is where the cost gate
-sits, because that is where the real spend is.
-
-`ai_spend_cents` is a second, independent guard alongside `ai_analyses` — a per-call cost
-ceiling protects against a model price change or an unexpectedly long prompt in a way a
-request count cannot.
 
 ---
 
@@ -62,7 +51,7 @@ request count cannot.
 ```
 
 `limit_value IS NULL` means unlimited. The override table is what lets you say "give this
-design partner 10× the AI budget for three months" without inventing a plan, and its
+design partner a temporary higher import limit" without inventing a plan, and its
 `expires_at` means you do not have to remember to take it away.
 
 ### Degradation when a subscription lapses
@@ -116,7 +105,6 @@ of a blank 403. That message is the entire conversion surface of a freemium prod
 | Create import | `POST /imports` — before the presigned URL is issued |
 | Commit import | Re-checked with the **actual** row count from validation |
 | Invite member | `POST /invitations` |
-| Trigger AI | Inside the Stage 5 gate, before dispatch |
 | Generate export | `POST /exports` |
 | Configure detection rules | `PUT /settings/detection` |
 
@@ -133,8 +121,15 @@ ON CONFLICT (organization_id, metric_key, period_start)
 DO UPDATE SET value = usage_counters.value + EXCLUDED.value;
 ```
 
-Consumption is recorded **in the transaction that performs the work**, so a rolled-back import
-does not consume quota. Periods are calendar months in the organization's timezone.
+For imports, `jobs_imported` is reserved by incrementing the usage counter in the **same
+transaction that moves the validated batch to `queued` and enqueues `import.process`**. The
+reservation uses the actual importable row count (`total - errors - skipped`) and is protected
+by the entitlement advisory lock. This prevents two concurrent commits from both passing the
+same remaining allowance. A rolled-back commit does not consume quota; once the commit is
+accepted, cancellation or terminal failure can leave the reservation above the number of rows
+actually written, which the reconciliation job corrects. Other metered actions consume in the
+transaction that performs their work. Periods are calendar months in the organization's
+timezone.
 
 A nightly reconciliation recomputes `jobs_imported` from `import_batches` for the current
 period and corrects drift, since a counter that diverges from reality is worse than no counter.

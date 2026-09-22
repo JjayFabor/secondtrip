@@ -19,7 +19,7 @@ Records that are deliberately **not** tenant-owned:
 | `system_root_causes`, `system_rework_categories` | Seed/global defaults an org may adopt or override. |
 
 Everything else — customers, locations, equipment, technicians, jobs, imports, candidates,
-reviews, categories, rules, cost models, audit events, background jobs, embeddings — carries
+reviews, categories, rules, cost models, audit events, and background jobs — carries
 `organization_id NOT NULL`.
 
 ### The membership join is the only bridge
@@ -225,11 +225,9 @@ security review in [19-testing-strategy.md](19-testing-strategy.md).
 | 4 | **Background job loses tenant context** | Worker reuses ambient/last-seen context | `TenantContext` is reconstructed *from the job row's* `organization_id` on every execution. Handlers receive a context argument and have no access to a global one |
 | 5 | **Object storage traversal** | User-supplied filename in the R2 key | Keys are built only from server-generated UUIDs: `orgs/{org_id}/imports/{import_id}/source.csv`. Original filename stored as a DB column, never used in a key. See [10-storage.md](10-storage.md) |
 | 6 | **Signed URL leakage / reuse** | A presigned GET shared or logged | Short TTL (≤ 300 s), generated per-request after an authorization check, never logged, never embedded in an email |
-| 7 | **Vector retrieval crossing tenants** | ANN search returns another org's job | Every embedding query filters `organization_id`; pgvector post-filtering recall issue addressed in [08-ai-and-embeddings.md §5](08-ai-and-embeddings.md) |
-| 8 | **AI prompt contamination** | Another org's job text in a prompt | Prompt assembly takes an org-scoped read model; a test asserts no prompt builder accepts un-scoped inputs |
-| 9 | **Cache poisoning (future)** | Shared cache key without org | Any cache key MUST be prefixed `org:{organization_id}:`. A cache helper that refuses un-prefixed keys is the enforcement point. Not applicable in V1 (no cache) |
-| 10 | **Export file containing foreign rows** | Export query missing filter | Exports run through the same tenant repositories; export object key is org-namespaced |
-| 11 | **Audit log disclosure** | Reading another org's audit trail | `audit_events.organization_id` + RLS; only admin+ may read |
+| 7 | **Cache poisoning (future)** | Shared cache key without org | Any cache key MUST be prefixed `org:{organization_id}:`. A cache helper that refuses un-prefixed keys is the enforcement point. Not applicable in V1 (no cache) |
+| 8 | **Export file containing foreign rows** | Export query missing filter | Exports run through the same tenant repositories; export object key is org-namespaced |
+| 9 | **Audit log disclosure** | Reading another org's audit trail | `audit_events.organization_id` + RLS; only admin+ may read |
 | 12 | **Enumeration via error messages** | "Job not found in org X" vs "Job belongs to org Y" | Uniform 404 body; error responses never echo a resource's owning org |
 | 13 | **Aggregate leakage** | An analytics query that groups without an org filter | Analytics repositories are tenant-scoped like all others; raw-SQL analytics covered by the raw-SQL audit test |
 | 14 | **Invitation token replay** | Accepting an invite mints a membership for the wrong org | Token is a hash lookup returning the invitation row; the org comes from that row, never from the request body |

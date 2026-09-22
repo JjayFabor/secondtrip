@@ -15,7 +15,7 @@ customers' customers, and their technicians. That shapes the whole posture.
 | Equipment | serial, make, model, install date | Property data | Low |
 | Technician | name, employee code, email, hourly cost | Our customer's employee | **High** — employment-consequential |
 | Job records | dates, amounts, descriptions, free-text notes | Mixed | **High** — notes can contain anything |
-| Derived | candidates, signals, scores, embeddings, AI analyses | Derived from the above | High (embeddings encode the text) |
+| Derived | candidates, signals, scores | Derived from the above | High |
 | Human decisions | reviews, categories, root causes, reviewer identity | Our user | Medium |
 | Operational | audit events, background jobs, logs | Our user | Medium |
 
@@ -23,11 +23,7 @@ Two entries deserve emphasis:
 
 - **Free-text notes are unbounded.** A technician may have written a medical detail, a gate
   code, or an opinion about the occupant. We cannot schema-constrain them, so they are treated
-  as high-sensitivity throughout: never logged, never in audit payloads, redacted before AI
-  calls.
-- **Embeddings are personal data.** A 768-dimensional vector derived from text containing a
-  name is not anonymous. It is therefore deleted wherever its source text is deleted, never
-  retained as "just derived data."
+  as high-sensitivity throughout: never logged and never included in audit payloads.
 
 ### Controller / processor position
 
@@ -37,10 +33,9 @@ delete on their instruction. This has three concrete consequences in the design:
 
 1. Deletion requests from a *data subject* (an end customer) are handled by the organization,
    not by us; we provide the tooling to execute them.
-2. Cross-organization pooling of personal data is forbidden — including for model improvement
-   ([08 §6](08-ai-and-embeddings.md)).
+2. Cross-organization pooling of personal data is forbidden.
 3. A Data Processing Agreement and a subprocessor list (Neon, Render, Vercel, Cloudflare,
-   OpenAI, Resend) are launch requirements, not paperwork for later. Any privacy-conscious
+   Resend) are launch requirements, not paperwork for later. Any privacy-conscious
    B2B buyer will ask for both.
 
 ---
@@ -116,8 +111,6 @@ historical business records" is a position that must be disclosed, not assumed.
 | `import_rows` (error/warning) | Until batch deleted | No | The user's diagnostic record |
 | Candidates, signals, scores | Follows jobs | No | Derived |
 | `candidate_signals` prior runs | Current + 2 previous runs | No | Bounded explainability history |
-| Embeddings | Follows jobs | No | Derived personal data |
-| AI analyses | 12 months | No | Debugging and agreement metrics |
 | Reviews | Follows jobs | No | The product's core asset |
 | Audit events | 24 months | Longer on higher plans | Compliance |
 | Sessions | 30 days past expiry | No | |
@@ -169,11 +162,6 @@ delivered by signed URL with a 30-day lifecycle expiry. Every cell passes throug
 
 ## 7. Minimisation and technician data
 
-**To AI providers:** redaction per [08 §7](08-ai-and-embeddings.md) — names, addresses,
-phones, emails and serials are replaced before any call, including embedding calls.
-Technicians become stable per-org pseudonyms so "same technician" stays computable without
-transmitting a name.
-
 **In logs:** never. **In audit payloads:** never (allowlist in [13 §4](13-audit.md)).
 **In error messages:** IDs only.
 
@@ -201,9 +189,8 @@ the analytics endpoints may return, not merely what the UI chooses to show.
 | Access (end customer) | The organization exports that customer's jobs; we provide the filter |
 | Rectification | Correct at source and re-import, or edit the customer/equipment record directly |
 | Erasure (our user) | §3 anonymisation |
-| Erasure (end customer) | Organization deletes the customer → cascades jobs, candidates, embeddings, AI analyses. A `POST /customers/{id}/erase` action exists specifically for this, with a preview of affected records |
+| Erasure (end customer) | Organization deletes the customer → cascades jobs and candidates. A `POST /customers/{id}/erase` action exists specifically for this, with a preview of affected records |
 | Portability | §6 full export |
-| Objection to AI processing | Org-level `ai_enabled = false`; deterministic detection continues |
 
 `POST /customers/{id}/erase` is a deliberate addition: without it, an organization receiving an
 erasure request from one of their customers would have to delete an entire import. That would

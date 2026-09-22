@@ -41,13 +41,8 @@ below are written with no route-group-specific imports, so nothing here blocks i
 | Supporting positioning | Review your job history, investigate possible callbacks, and understand rework patterns without replacing your existing CRM. |
 | Personality | Clear, practical, analytical, dependable, calm, observant, professional |
 
-AI is a capability the product uses, not the brand's subject. It is named when explaining a
-specific mechanism (e.g. "SecondTrip compares job notes for similar wording") and never used
-as the headline claim. This is a direct extension of
-[07-detection-engine.md ADR / §5](07-detection-engine.md): the deterministic score is the
-credible artifact; AI adds a narrative on top of it. The visual language should make the same
-argument the architecture makes — evidence first, AI labelled as a suggestion, human judgement
-visibly final.
+The product is positioned around evidence and human judgement, not AI. The deterministic score
+and its signal breakdown are the credible artifacts; the manager's review is visibly final.
 
 ---
 
@@ -208,9 +203,9 @@ error:**
 | `uncertain` | `--warning` |
 
 This mapping is a direct visual expression of
-[07-detection-engine.md §7](07-detection-engine.md): "AI output is not authoritative... the
-manager confirms or rejects." A UI that colors a rejected candidate red is quietly arguing the
-opposite of the product's own premise.
+[07-detection-engine.md §7](07-detection-engine.md): the manager confirms or rejects a machine-
+generated candidate. A UI that colors a rejected candidate red is quietly arguing the opposite
+of the product's own premise.
 
 ---
 

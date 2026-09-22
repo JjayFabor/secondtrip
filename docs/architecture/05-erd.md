@@ -189,7 +189,6 @@ erDiagram
         boolean is_warranty
         boolean is_no_charge
         tsvector search_document
-        bytea embedding_content_hash
         timestamptz deleted_at
     }
     JOB_NOTES {
@@ -266,7 +265,6 @@ erDiagram
     JOBS ||--o{ REWORK_CANDIDATES : "followup job"
     REWORK_CANDIDATES ||--o{ CANDIDATE_SIGNALS : "explained by"
     REWORK_CANDIDATES ||--o{ CANDIDATE_SCORE_HISTORY : "scored over time"
-    REWORK_CANDIDATES ||--o{ AI_ANALYSES : "optionally analysed"
     REWORK_CANDIDATES ||--o{ REWORK_REVIEWS : "judged by human"
     REWORK_CANDIDATES ||--o{ REWORK_COST_SNAPSHOTS : "costed as"
 
@@ -275,14 +273,12 @@ erDiagram
     USERS ||--o{ REWORK_REVIEWS : decided
     REWORK_REVIEWS ||--o| REWORK_REVIEWS : "superseded by"
     ORGANIZATION_COST_MODELS ||--o{ REWORK_COST_SNAPSHOTS : "priced with"
-    JOBS ||--o{ JOB_EMBEDDINGS : "represented as"
 
     DETECTION_SIGNAL_DEFINITIONS {
         text key PK "global not tenant"
         text label
         enum value_type
         numeric default_weight
-        boolean requires_embeddings
     }
     DETECTION_RULE_SETS {
         uuid id PK
@@ -291,8 +287,6 @@ erDiagram
         boolean is_active "one per org"
         int window_days
         numeric min_score_to_surface
-        numeric min_score_for_ai
-        numeric similarity_threshold
         int max_followups_per_job
     }
     DETECTION_RULES {
@@ -326,8 +320,8 @@ erDiagram
         numeric current_normalized_score
         enum score_band
         boolean is_suppressed
-        enum similarity_state
-        numeric similarity_score
+        enum suppression_reason "signal_veto out_of_window"
+        text suppressed_by_signal_key "veto only"
         enum workflow_status
         uuid current_rule_set_id FK
         uuid current_detection_run_id FK
@@ -338,7 +332,7 @@ erDiagram
         uuid candidate_id FK
         uuid detection_run_id FK
         text signal_key "UK with candidate and run"
-        boolean matched
+        enum outcome "matched not_matched not_evaluable"
         numeric strength
         jsonb raw_value
         numeric weight_applied
@@ -377,7 +371,6 @@ erDiagram
         uuid root_cause_id FK "RESTRICT"
         uuid reviewed_by_user_id FK "RESTRICT"
         numeric score_at_review "what the machine claimed"
-        uuid ai_analysis_id_at_review FK
         text note
         timestamptz decided_at
         uuid superseded_by_review_id FK
@@ -403,30 +396,6 @@ erDiagram
         numeric total_cost
         jsonb inputs "exact values used"
     }
-    JOB_EMBEDDINGS {
-        uuid id PK
-        uuid organization_id FK
-        uuid job_id FK "UK with scope and model"
-        enum content_scope "problem full"
-        text model_key
-        vector embedding
-        bytea content_hash
-    }
-    AI_ANALYSES {
-        uuid id PK
-        uuid organization_id FK
-        uuid candidate_id FK
-        enum analysis_type
-        text model_key
-        text prompt_key
-        int prompt_version
-        bytea input_hash "UK dedup"
-        enum status
-        text classification "NOT an enum"
-        numeric confidence
-        jsonb output
-        numeric estimated_cost_amount
-    }
 ```
 
 Two relationships to read carefully:
@@ -448,7 +417,6 @@ erDiagram
     ORGANIZATIONS ||--o| ORGANIZATION_SUBSCRIPTIONS : subscribes
     ORGANIZATIONS ||--o{ ORGANIZATION_ENTITLEMENT_OVERRIDES : "granted"
     ORGANIZATIONS ||--o{ USAGE_COUNTERS : meters
-    ORGANIZATIONS ||--o{ AI_USAGE_DAILY : spends
     ORGANIZATIONS ||--o{ BILLING_EVENTS : "receives"
     PLANS ||--o{ PLAN_ENTITLEMENTS : grants
     PLANS ||--o{ ORGANIZATION_SUBSCRIPTIONS : "subscribed to"
@@ -531,15 +499,6 @@ erDiagram
         date period_end
         bigint value
     }
-    AI_USAGE_DAILY {
-        uuid organization_id PK
-        date usage_date PK
-        text model_key PK
-        text operation PK
-        int request_count
-        bigint prompt_tokens
-        numeric estimated_cost_amount
-    }
     BILLING_EVENTS {
         uuid id PK
         uuid organization_id FK
@@ -563,7 +522,6 @@ erDiagram
 | job pair → candidate | 1-to-1 per ordered pair | `UNIQUE (organization_id, prior_job_id, followup_job_id)` |
 | candidate → current review | 1-to-at-most-1 | `UNIQUE (candidate_id) WHERE superseded_by_review_id IS NULL` |
 | candidate → signals | 1-to-many per run | `UNIQUE (candidate_id, detection_run_id, signal_key)` |
-| job → embedding | 1 per scope per model | `UNIQUE (job_id, content_scope, model_key)` |
 | organization → active rule set | 1-to-1 | `UNIQUE (organization_id) WHERE is_active` |
 | organization → active cost model | 1-to-1 | `UNIQUE (organization_id) WHERE is_active` |
 | organization → subscription | 1-to-1 | `UNIQUE (organization_id)` |

@@ -50,11 +50,12 @@ url = storage.signed_upload_url(
 )
 ```
 
-Constraints enforced at signing time (see [10-storage.md §4](10-storage.md)):
+Upload controls (see [10-storage.md §4](10-storage.md)):
 
-- `Content-Length` range condition caps the upload size at the object-store level, so an
-  oversized file is rejected by R2 before a byte reaches us.
-- `Content-Type` is pinned.
+- `Content-Type` is pinned in the signature.
+- The browser rejects a file above the returned plan limit before transfer. Because R2 does not
+  support presigned POST policies, the API authoritatively verifies `HEAD` and streamed bytes
+  after PUT, immediately deleting and rejecting an oversized object.
 - The key is built exclusively from server-generated UUIDs. The user's filename is stored in
   `import_batches.original_filename` for display and **never** appears in a key — that is the
   path-traversal and key-collision mitigation.
@@ -356,6 +357,17 @@ straight back into a file the user will open in Excel. The escaping helper lives
 Rows and file size are checked **while streaming**, aborting the moment a limit is crossed —
 never after buffering the whole file. `csv.field_size_limit` is set explicitly; the default
 allows a single field to consume a great deal of memory.
+
+Full validation streams the object into an anonymous, disk-backed temporary file while these
+limits are enforced. The worker can then scan up to 200 date values and restart parsing from
+the beginning without retaining the source in memory or downloading it twice. Rows are parsed
+and persisted in bounded chunks; the temporary file is discarded when the handler exits.
+
+The 500-row checkpoint is also the performance unit: identity keys are deduplicated in memory,
+advisory locks are acquired in a stable batch, and owning module services perform bounded bulk
+upserts. `make perf-import` exercises this exact path with the generated `hvac-v2` fixture. Its
+timing starts before independent object verification and includes profile, mapping, full
+validation, commit, queue polling, and processing; direct browser upload time is excluded.
 
 Compressed uploads are **not accepted in V1**. Accepting gzip means either trusting a
 decompressed-size header or implementing a decompression-bomb guard, and the feature is worth

@@ -2,8 +2,7 @@
 
 The most important component in the system. Two constraints shape every decision here:
 
-- **It must work with the AI provider switched off.** Stages 1, 2, 4 and 6 are pure SQL and
-  Python.
+- **It is deterministic.** Candidate generation and scoring are pure SQL and Python.
 - **Every result must be defensible to a manager who disagrees with it.** We store the
   evidence, not just the number.
 
@@ -14,15 +13,12 @@ The most important component in the system. Two constraints shape every decision
 ```
 Stage 1  Candidate generation     SQL, blocked  → ordered job pairs
 Stage 2  Deterministic signals    Python        → SignalResult[]
-Stage 3  Semantic similarity      pgvector      → cosine signal   (async, may be absent)
-Stage 4  Composite scoring        Python        → score + band + suppression
-Stage 5  LLM classification       AIProvider    → structured output  [OFF in V1]
-Stage 6  Human review             UI            → layer-4 truth
+Stage 3  Composite scoring        Python        → score + band + suppression
+Stage 4  Human review             UI            → layer-4 truth
 ```
 
-Stages 1, 2 and 4 run as one background job (`detection.run`) and complete in seconds for a
-typical import. Stage 3 runs separately because it depends on an external provider, and its
-absence must never block a result.
+Stages 1–3 run as one background job (`detection.run`) and complete in seconds for a typical
+import.
 
 ---
 
@@ -104,7 +100,6 @@ equivalents ([04 §5](04-data-model.md)).
 | --- | --- |
 | `import_completed` | `from_date = min(service_date in batch) - window_days`, `to_date = max(...)`. Only the affected window is re-evaluated |
 | `rules_changed` | Full history — a weight change invalidates every score |
-| `embeddings_ready` | Only the candidate IDs whose `similarity_state = 'pending'` |
 | `manual` / `scheduled` | User-specified range, default last 90 days |
 
 The `- window_days` on the lower bound matters: importing March's jobs must re-evaluate late
@@ -127,8 +122,11 @@ cascade away every manager decision the organization has ever made. The unique c
 the job pair exists precisely so that the row identity survives re-scoring.
 
 Candidates whose pair no longer qualifies (e.g. the window was narrowed) are **not deleted** —
-they are marked `is_suppressed` with reason `out_of_window`. Deleting them would again destroy
-reviews. Only deleting the underlying job removes a candidate, via cascade.
+they are marked `is_suppressed` with `suppression_reason = 'out_of_window'` and no signal key.
+A scoring veto instead records `suppression_reason = 'signal_veto'` plus the responsible signal
+key. Keeping those two causes distinct avoids pretending lifecycle state came from a rule.
+Deleting stale pairs would again destroy reviews. Only deleting the underlying job removes a
+candidate, via cascade.
 
 ---
 
@@ -148,13 +146,12 @@ class SignalResult:
     key: str
     outcome: SignalOutcome
     strength: Decimal          # 0..1 — allows partial credit for banded signals
-    raw_value: dict[str, Any]  # {"days": 8} / {"cosine": 0.89}
+    raw_value: dict[str, Any]  # {"days": 8}
     explanation: str           # "Same equipment (serial ...4821)"
 
 
 class Signal(Protocol):
     key: ClassVar[str]
-    requires_embeddings: ClassVar[bool]
 
     def evaluate(self, pair: CandidatePair, params: dict[str, Any]) -> SignalResult: ...
 ```
@@ -182,7 +179,6 @@ normalized against **what was actually knowable for this pair**. See §5.
 | `same_technician` | additive | 5 | Same tech both visits — a workmanship indicator |
 | `repeat_part_code` | additive | 20 | A `job_line_items.code` of kind `part` appears on both |
 | `recurrence_density` | additive | 10 | ≥ 3 visits for this customer/equipment inside the window |
-| `description_similarity` | additive | 20 | Stage 3 — cosine ≥ `similarity_threshold` |
 | `scheduled_maintenance` | **veto** | — | Follow-up category is in the org's maintenance set |
 | `planned_multivisit` | **veto** | — | Prior job flagged as part of a planned multi-visit project |
 
@@ -207,7 +203,12 @@ filter and override if the veto is mistaken.
 
 ---
 
-## 4. Stage 3 — Semantic similarity
+## 4. Deferred research — semantic similarity
+
+This section is not part of V1 and has no runtime implementation. It is retained only as
+historical research; [08-ai-and-embeddings.md](08-ai-and-embeddings.md) is also explicitly
+non-binding. Do not add these fields, jobs, or providers unless the trigger in
+[21 §Deferred](21-implementation-sequencing.md) is met.
 
 ### Why it earns its place
 
@@ -269,7 +270,7 @@ looks broken."
 
 ---
 
-## 5. Stage 4 — Composite scoring
+## 5. Stage 3 — Composite scoring
 
 ```python
 def score(results: list[SignalResult], rules: RuleSet) -> ScoreOutcome:
@@ -333,13 +334,12 @@ Potential callback · Score 92 / 100 · High confidence
 
   ✓ Same equipment            Carrier 24ACC6, serial ...4821          +30
   ✓ 8 days apart              12 Mar → 20 Mar                         +20
-  ✓ Description similarity    0.89 — "no cooling upstairs"            +20
   ✓ Follow-up invoiced $0     Invoice #4471                           +25
   ✓ Same customer             Mercer Property Group                   +20
   ✓ Same technician           D. Okafor                                +5
   ✗ Warranty flag             Not marked as warranty                    —
   — Repeat part code          No parts recorded on the first visit    n/a
-                                                       Raw 120 / 130 → 92
+                                                       Raw 100 / 110 → 91
 ```
 
 The `n/a` row is the `NOT_EVALUABLE` state made visible, and it doubles as a data-quality
@@ -347,7 +347,10 @@ nudge: it tells the customer exactly which missing column would sharpen their re
 
 ---
 
-## 6. Stage 5 — LLM classification (designed, disabled in V1)
+## 6. Deferred research — LLM classification
+
+This section is not part of V1 and has no runtime implementation. It is retained only as
+historical research and must not be treated as an implementation requirement.
 
 ### Gating
 
@@ -437,12 +440,11 @@ stored result can be traced to the exact prompt that produced it.
 
 ---
 
-## 7. Stage 6 — Human review
+## 7. Stage 4 — Human review
 
 ```
 Reviewer opens a candidate
-  → sees the evidence panel (§5), both job records side by side,
-    and — when enabled — the AI's opinion, clearly labelled as a suggestion
+  → sees the evidence panel (§5) and both job records side by side
   → decides: confirmed | rejected | uncertain
   → if confirmed: picks a category and (optionally) a root cause
   → INSERT INTO rework_reviews
@@ -453,16 +455,14 @@ Reviewer opens a candidate
 
 Rules the implementation must not violate:
 
-1. **AI output never becomes a review.** There is no "accept AI suggestion" path that writes a
-   review with a system actor. A human presses the button; `reviewed_by_user_id` is
+1. **Reviews are human-authored.** A human presses the button; `reviewed_by_user_id` is
    `NOT NULL`.
 2. **Reviews are append-only.** Changing a classification inserts a new row and sets
    `superseded_by_review_id` on the previous one.
 3. **Re-running detection never modifies a review.** A re-scored candidate whose score drops
-   keeps its confirmed review; the UI shows both, which is itself useful signal ("the model now
-   disagrees with a confirmed callback" is a bug report about the rules).
-4. `score_at_review` and `ai_analysis_id_at_review` are captured at decision time. These two
-   columns are what make §8 possible.
+   keeps its confirmed review; the UI shows both, which is itself useful signal ("the detector
+   now disagrees with a confirmed callback" is a bug report about the rules).
+4. `score_at_review` is captured at decision time so §8 remains reproducible.
 
 ---
 
@@ -476,7 +476,6 @@ Human reviews are ground truth. With them, quality is measurable rather than ass
 | **Score calibration** | Mean confirmation rate per 10-point score bucket. A well-calibrated model confirms ~90% of its 90-scored candidates |
 | **Signal lift** | Confirmation rate when a signal matched vs. when it did not — identifies weights that are wrong |
 | **Suppression error rate** | Suppressed candidates a user un-suppressed and then confirmed |
-| **AI agreement** | `ai_analyses.classification` vs the human decision, when Stage 5 is on |
 | **Coverage** | Confirmed callbacks that were never surfaced (found via user-created manual pairs) |
 
 Exposed in an internal analytics view, per organization. The first three directly drive
@@ -496,11 +495,13 @@ backend/app/modules/detection/
 ├── router.py
 ├── schemas.py
 ├── models.py                     # rule sets, rules, runs, candidates, signals
+├── defaults.py                   # code-owned catalogue and version-1 rule defaults
 ├── repository.py
 ├── service.py                    # run orchestration, rule set versioning
+├── cli.py                        # local proof; enqueues the same detection.run job
 ├── pairing.py                    # canonical pair ordering — the ONLY pair constructor
 ├── generation/
-│   ├── query.py                  # the blocked SQL of §2
+│   ├── query.py                  # compatibility re-export of jobs/read_models.py
 │   └── runner.py                 # chunked upsert + fan-out guard
 ├── signals/
 │   ├── base.py                   # Signal protocol, SignalResult, SignalOutcome
@@ -508,19 +509,20 @@ backend/app/modules/detection/
 │   ├── temporal.py               # days_between, recurrence_density
 │   ├── entity.py                 # same_customer/location/equipment/technician
 │   ├── commercial.py             # zero_value, low_value, warranty, repeat_part_code
-│   ├── semantic.py               # description_similarity
-│   └── vetoes.py                 # scheduled_maintenance, planned_multivisit
+│   ├── vetoes.py                 # scheduled_maintenance, planned_multivisit
+│   └── runner.py                 # bounded context loads + evidence/history persistence
 ├── scoring/
 │   ├── calculator.py             # the pure function of §5
 │   ├── bands.py
 │   └── explanation.py            # renders the human sentence per signal
-├── ai/
-│   ├── gate.py                   # Stage 5 eligibility
-│   ├── classifier.py
-│   └── prompts/
 └── quality/
     └── metrics.py                # §8
 ```
+
+The blocked job-pair selectable and bulk job context loaders are owned by
+`jobs/read_models.py`. Detection consumes that public read boundary rather than importing the
+jobs module's ORM models or repository. This is the sole sanctioned cross-module bulk-read
+exception in [16 §2](16-repository-structure.md).
 
 A startup assertion verifies that `signals/registry.py` and
 `detection_signal_definitions` agree in both directions. A weight configured for a signal the

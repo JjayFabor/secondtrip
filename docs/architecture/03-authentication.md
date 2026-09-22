@@ -264,7 +264,7 @@ account exists.
 
 - **May:** call `GET /api/v1/me` to render the current user and their organizations; hide UI
   affordances based on role for usability.
-- **May:** rely on Next.js `middleware.ts` to redirect an unauthenticated visitor away from
+- **May:** rely on Next.js `proxy.ts` to redirect an unauthenticated visitor away from
   `/app/*` — a UX optimisation that checks only for cookie *presence*, never validity.
 - **May not:** treat any frontend check as enforcement. Every `/app` page's data comes from an
   API call that independently authenticates and authorizes.

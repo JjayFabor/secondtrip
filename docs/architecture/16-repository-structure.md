@@ -72,6 +72,7 @@ backend/
 │   │   ├── logging.py            # structlog config + redaction processor
 │   │   ├── errors.py             # domain exception hierarchy + problem+json handlers
 │   │   ├── ids.py                # UUIDv7 generation
+│   │   ├── openapi.py            # stable generated-contract operation IDs
 │   │   ├── pagination.py         # cursor encode/decode
 │   │   ├── permissions.py        # Permission enum, rank map
 │   │   ├── tenancy.py            # TenantContext
@@ -93,7 +94,7 @@ backend/
 │   │       ├── request_id.py
 │   │       ├── logging.py
 │   │       ├── csrf.py
-│   │       └── rate_limit.py
+│   │       └── security_headers.py
 │   │
 │   ├── modules/
 │   │   ├── identity/
@@ -108,7 +109,7 @@ backend/
 │   │   ├── costs/
 │   │   ├── billing/              # layout in [14 §6]
 │   │   ├── audit/
-│   │   └── tasks/                # queue, worker, registry, scheduler
+│   │   └── tasks/                # queue, worker, registry, stale recovery
 │   │
 │   ├── providers/
 │   │   ├── ai/                   # layout in [08 §8]
@@ -126,6 +127,8 @@ backend/
 │       ├── text.py               # normalization used by imports AND detection
 │       └── result.py
 │
+├── scripts/
+│   └── export_openapi.py         # deterministic schema export; no live API/database required
 ├── seeds/                        # industry packs, default categories, signal definitions
 └── tests/
     ├── conftest.py
@@ -165,8 +168,8 @@ brief warns against.
 3. A module may import another module's `service.py` and `schemas.py` — never its
    `repository.py` or `models.py`.
 4. `api` imports modules; modules never import `api`.
-5. Vendor SDKs are confined: `openai` only under `providers/ai/openai/`, `boto3`/`aioboto3`
-   only under `providers/storage/r2/`, `resend` only under `providers/email/`.
+5. Vendor SDKs are confined: `boto3`/`aioboto3` only under `providers/storage/r2/`, and
+   `resend` only under `providers/email/`.
 6. No import cycles between modules.
 
 Rule 3 is the one that decays without enforcement, and it is the one that keeps the monolith
@@ -249,12 +252,12 @@ frontend/
 │   │                                       # SignalRow, EvidencePanel, CandidateListRow,
 │   │                                       # ImportColumnMapper, ImportIssueTable, EmptyState
 │   ├── lib/
-│   │   ├── api-client.ts                   # typed fetch over packages/contracts
-│   │   ├── auth.ts                         # cookie forwarding for server components
+│   │   ├── api.ts                          # browser fetch: credentials, CSRF, problem+json
+│   │   ├── api-server.ts                   # no-store reads + cookie forwarding for RSCs
 │   │   ├── format.ts                       # money/date formatting in org timezone
 │   │   └── seo.ts                          # metadata + JSON-LD builders
 │   ├── content/                            # MDX: resources, glossary, industry copy
-│   └── middleware.ts                       # auth redirect + security headers
+│   └── proxy.ts                            # auth redirect + security headers (Next.js convention)
 └── public/
 ```
 
@@ -275,20 +278,32 @@ list is a supporting reference view. Beyond ordering, the routes are as specifie
 ## 4. Local development
 
 ```bash
-make dev          # docker compose postgres+pgvector, migrate, seed, run api + web
-make test         # backend pytest + frontend vitest
+make dev          # start postgres; print the two explicit API/web dev commands
+make test         # backend pytest (frontend tests have not been added yet)
 make lint         # ruff, mypy, import-linter, eslint, tsc
 make migrate m="add detection tables"
-make contracts    # regenerate packages/contracts from the live OpenAPI
+make contracts    # export OpenAPI and regenerate packages/contracts
 make seed-demo    # a realistic HVAC dataset with planted callbacks
+make perf-import  # local 50k-row import release gate (real Postgres/RLS/worker path)
 ```
+
+`make contracts` exports OpenAPI deterministically from the FastAPI application factory without
+starting the API or connecting to the database, then runs the pinned `openapi-typescript`
+generator. The generated declaration is committed; the frontend's small fetch wrapper imports
+its request and response models from it, and CI rejects drift.
 
 `make seed-demo` is worth building early. Developing a detection engine without believable data
 means testing against fixtures that always confirm the behaviour you just wrote. The demo set
 should contain known callbacks, known maintenance pairs that must be vetoed, and known
 unrelated pairs — so a detection change's effect is immediately visible.
 
-Local Postgres runs `pgvector/pgvector:pg17` in Docker; the RLS app-role bootstrap from
+The seed is deterministic, local-only, and entirely fictional. It is installed through the same
+storage, queue, validation, and processing services used by application imports. A matching second
+run performs no writes and preserves organization and job IDs; `RESET=1 make seed-demo` rebuilds
+only the reserved `secondtrip-hvac-demo` tenant. Ground-truth pair labels live in
+`backend/seeds/data/hvac_demo_expectations.json`, never on operational rows.
+
+Local Postgres runs `postgres:17` in Docker; the RLS app-role bootstrap from
 `infra/neon/` is applied by `make dev` so local behaves like production. Developing against a
 superuser connection that bypasses RLS and then discovering the policies are wrong in
 production is a failure mode worth designing out on day one.
@@ -300,8 +315,8 @@ production is a failure mode worth designing out on day one.
 | Workflow | Runs |
 | --- | --- |
 | `backend.yml` | ruff · mypy (strict) · import-linter · pytest with a real Postgres service · pip-audit |
-| `frontend.yml` | eslint · tsc · vitest · next build |
-| `contracts.yml` | Start the API, regenerate types, **fail on any diff** |
+| `frontend.yml` | eslint · tsc · next build (Vitest joins when frontend tests exist) |
+| `contracts.yml` | Export OpenAPI, regenerate types, **fail on any diff** |
 | (all) | gitleaks |
 
 Type checking is `mypy --strict` on `app/`. It is painful for the first week and then pays for

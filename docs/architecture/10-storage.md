@@ -82,7 +82,7 @@ makes any future bucket policy or lifecycle rule tenant-aware by construction.
 | Access | S3 API with scoped R2 API tokens only |
 | Encryption | R2 server-side encryption (default) |
 | Versioning | Off (cost); deletion is intended to be final |
-| CORS | `PUT` allowed only from the exact app origins in `CORS_ALLOWED_ORIGINS`; `Content-Type` and `Content-Length` in allowed headers |
+| CORS | `PUT` allowed only from the exact app origins in `CORS_ALLOWED_ORIGINS`; `Content-Type` allowed; `ETag` exposed |
 | Lifecycle | Abort incomplete multipart uploads after 1 day; expire `exports/` objects after 30 days |
 | Buckets | One per environment: `secondtrip-dev`, `secondtrip-prod`. Never shared |
 
@@ -118,16 +118,21 @@ async def download_import_file(tenant, import_id) -> str:
 ```python
 PresignedUpload(
     url=...,
-    fields={...},                       # POST policy, or headers for PUT
+    method="PUT",
+    headers={"Content-Type": "text/csv"},
     key="orgs/.../source.csv",
     max_bytes=52_428_800,
     expires_at=...,
 )
 ```
 
-The presigned policy includes a **`content-length-range` condition**, so R2 itself rejects an
-oversized upload. Relying on a post-upload size check means the bytes were already transferred
-and stored — you have paid for the abuse before detecting it.
+Cloudflare R2 supports presigned `PUT` but not presigned HTML `POST` policies, so it cannot apply
+an S3 `content-length-range` policy to this URL. The browser rejects files above `max_bytes`
+before upload as a usability/cost guard. After upload, the API independently calls `HEAD`, deletes
+an oversized object immediately, and refuses to profile it; streaming verification repeats the
+bound so inconsistent metadata cannot bypass the limit. Plan entitlements and the 500 MB hard
+ceiling still apply. This is a documented provider limitation, not a claim that client-side size
+checking is a security boundary.
 
 `Content-Type` is pinned to `text/csv`. Note that this is a *hygiene* control, not a security
 one: `Content-Type` is client-asserted and the file's real content is whatever was uploaded.
@@ -170,7 +175,7 @@ precisely because of the key structure in §2.
 | Cross-tenant object access | Org-namespaced keys + authorization before signing |
 | Path traversal via filename | Keys contain no user input |
 | Signed URL leakage | 5 min TTL, never logged, never emailed |
-| Oversized upload | `content-length-range` in the presigned policy |
+| Oversized upload | Browser pre-check; authoritative `HEAD` + streaming bound; immediate delete and rejection |
 | Unbounded storage cost | Entitlement limits + lifecycle expiry |
 | Stored malicious content | Never rendered as web content; always `Content-Disposition: attachment`; parsed only as CSV with hard limits ([06 §9](06-csv-ingestion.md)) |
 | Credential compromise | Scoped R2 tokens per environment, rotatable; no long-lived root keys |
