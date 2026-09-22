@@ -13,6 +13,12 @@ dependencies = [
     "alembic==1.20.0",
     "structlog==26.1.0",
     "uuid6==2025.0.1",
+    "argon2-cffi==25.1.0",
+    "email-validator==2.3.0",
+    "httpx==0.28.1",
+    "charset-normalizer==3.5.1",
+    "phonenumbers==9.0.39",
+    "aioboto3==15.5.0",
 ]
 
 [dependency-groups]
@@ -22,7 +28,6 @@ dev = [
     "import-linter==2.15",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
-    "httpx==0.28.1",
     "asgi-lifespan==2.1.0",
 ]
 
@@ -40,6 +45,18 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # quality issue.
 ignore = ["RUF002", "RUF003"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's own required idiom is `param: T = Depends(...)` — the call
+# in the default IS the mechanism, not a mutable-default bug. Query/Path
+# get the same treatment for the same reason.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path"]
+
+[tool.ruff.lint.per-file-ignores]
+# Alembic's own --autogenerate formatter, not hand-written code — fighting
+# its line length and import order every revision isn't worth it. Real
+# mistakes (F401 unused imports, F821 undefined names, ...) still fail.
+"migrations/versions/*.py" = ["E501", "I001"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
@@ -48,6 +65,10 @@ exclude = ["migrations/"]
 
 [[tool.mypy.overrides]]
 module = "uuid6.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["aioboto3.*", "aiobotocore.*", "botocore.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -82,3 +103,11 @@ name = "modules never import api"
 type = "forbidden"
 source_modules = ["app.modules"]
 forbidden_modules = ["app.api"]
+
+[[tool.importlinter.contracts]]
+name = "modules use sibling public boundaries"
+type = "forbidden"
+source_modules = ["app.modules.*"]
+forbidden_modules = ["app.modules.*.models", "app.modules.*.repository"]
+allow_indirect_imports = true
+broken_contract_guidance = "Import a sibling service, schema, or sanctioned read_models module instead."
