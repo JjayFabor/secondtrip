@@ -74,6 +74,7 @@ def create_app() -> FastAPI:
         CSRFMiddleware,
         allowed_origins=settings.cors_allowed_origins,
         csrf_cookie_name=settings.csrf_cookie_name,
+        cookie_domain=settings.cookie_domain,
         cookie_secure=settings.cookie_secure,
     )
     app.add_middleware(SecurityHeadersMiddleware)

@@ -32,11 +32,13 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         *,
         allowed_origins: list[str],
         csrf_cookie_name: str,
+        cookie_domain: str | None,
         cookie_secure: bool,
     ) -> None:
         super().__init__(app)
         self._allowed_origins = set(allowed_origins)
         self._csrf_cookie_name = csrf_cookie_name
+        self._cookie_domain = cookie_domain
         self._cookie_secure = cookie_secure
 
     async def dispatch(
@@ -91,6 +93,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 secure=self._cookie_secure,
                 samesite="lax",
                 httponly=False,
+                domain=self._cookie_domain,
                 path="/",
             )
         return response

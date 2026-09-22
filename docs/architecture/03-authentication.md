@@ -211,7 +211,8 @@ The threat exists because we authenticate with a cookie. Defence is layered:
    contexts where `SameSite` behaves unexpectedly.
 3. **Double-submit token** for state-changing requests issued from the browser directly to
    the API: a non-`httpOnly` `st_csrf` cookie whose value must be echoed in an `X-CSRF-Token`
-   header. The API compares the two and rejects a mismatch.
+   header. The cookie uses the same shared `COOKIE_DOMAIN` as the session cookie so frontend
+   JavaScript can read it. The API compares the two values and rejects a mismatch.
 4. **No state-changing `GET`s.** Ever. A `GET` that mutates bypasses every mitigation above.
 
 Requests proxied through Next.js server components carry no browser-originating CSRF risk
