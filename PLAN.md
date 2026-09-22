@@ -654,9 +654,10 @@ for D36.
   the full exit-criteria checklist and the dependency-version findings from this pass.
 - **Step 2 — backend foundation, implemented and verified.** `backend/` scaffolded (uv, Python
   3.12); settings, structlog + redaction, request-ID middleware; async SQLAlchemy engine tuned
-  for PgBouncer; Alembic on the two-role split; `infra/neon/bootstrap.sql` creating
-  `secondtrip_app` (non-owner, no BYPASSRLS) with `ALTER DEFAULT PRIVILEGES` covering future
-  tables automatically; `TenantContext`, tenant-aware session factory, `TenantRepository`;
+  for PgBouncer; Alembic on the two-role split; a local-only role creation script plus
+  `infra/neon/bootstrap.sql` verifying `secondtrip_app` is non-owner/no-BYPASSRLS and applying
+  `ALTER DEFAULT PRIVILEGES` for future tables; `TenantContext`, tenant-aware session factory;
+  `TenantRepository`;
   `enable_rls`/`disable_rls` migration helpers; RFC 9457 errors, cursor pagination, UUIDv7;
   root `docker-compose.yml` (pgvector/pgvector:pg17); CI workflows. 23 tests pass against a
   live Postgres container (not mocked); `ruff`, `mypy --strict`, `import-linter` (3 contracts)
@@ -706,7 +707,7 @@ for D36.
   See [01 §2](docs/architecture/01-system-architecture.md).
 - **Real customer CSV samples** — the synonym dictionary and adversarial corpus are guesses
   until real exports are seen. Worth obtaining before Step 4 finishes.
-- **Neon production role setup** — `infra/neon/bootstrap.sql` is written and verified locally;
-  it still needs a real one-time run against the actual Neon project (as its owner role)
-  before any environment but local dev can work, with the dev-only password replaced per the
-  script's own header comment. Needed before Step 3's auth flows can target staging/prod.
+- **Neon production role setup** — the bootstrap and complete migration chain passed on an
+  expiring branch of the real Neon project; production still needs its SQL-created app role,
+  one-time bootstrap, and migration run before deployment. Needed before Step 3's auth flows
+  can target production.

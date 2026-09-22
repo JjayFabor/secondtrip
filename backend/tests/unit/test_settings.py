@@ -36,6 +36,30 @@ def test_production_posture_accepts_shared_cookie_domain(settings: Settings) -> 
     assert configured.app_env == "production"
 
 
+def test_neon_libpq_urls_are_normalized_for_asyncpg(settings: Settings) -> None:
+    values = settings.model_dump()
+    neon_url = (
+        "postgresql://secondtrip_app:encoded%2Fpassword@"
+        "ep-example-pooler.ap-southeast-1.aws.neon.tech/neondb"
+        "?sslmode=require&channel_binding=require"
+    )
+    values.update(
+        {
+            "database_url": neon_url,
+            "database_url_migrations": neon_url.replace("-pooler", ""),
+        }
+    )
+
+    configured = Settings.model_validate(values)
+
+    assert configured.database_url.startswith("postgresql+asyncpg://")
+    assert "encoded%2Fpassword" in configured.database_url
+    assert "ssl=require" in configured.database_url
+    assert "sslmode" not in configured.database_url
+    assert "channel_binding" not in configured.database_url
+    assert "-pooler" not in configured.database_url_migrations
+
+
 @pytest.mark.parametrize(
     ("updates", "message"),
     [

@@ -9,9 +9,9 @@ sessions/cookies/email/CORS-for-credentials.
 from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -126,6 +126,36 @@ class Settings(BaseSettings):
     email_api_key: str | None = None
     email_from_address: str = "noreply@secondtrip.example.com"
     email_from_name: str = "SecondTrip"
+
+    @field_validator("database_url", "database_url_migrations", mode="before")
+    @classmethod
+    def _normalize_asyncpg_url(cls, value: object) -> object:
+        """Accept Neon's standard libpq URL without weakening TLS.
+
+        Neon returns ``postgresql://...?sslmode=require&channel_binding=require``.
+        SQLAlchemy's asyncpg dialect instead expects ``postgresql+asyncpg`` and
+        passes ``ssl`` (not libpq's ``sslmode``) to asyncpg. Channel binding is
+        a libpq-only parameter and must not reach asyncpg.
+        """
+        if not isinstance(value, str):
+            return value
+        parts = urlsplit(value)
+        scheme = (
+            "postgresql+asyncpg"
+            if parts.scheme in {"postgres", "postgresql"}
+            else parts.scheme
+        )
+        if scheme != "postgresql+asyncpg":
+            return value
+
+        query: list[tuple[str, str]] = []
+        for key, query_value in parse_qsl(parts.query, keep_blank_values=True):
+            if key == "channel_binding":
+                continue
+            query.append(("ssl" if key == "sslmode" else key, query_value))
+        return urlunsplit(
+            (scheme, parts.netloc, parts.path, urlencode(query), parts.fragment)
+        )
 
     @model_validator(mode="after")
     def _validate_production_posture(self) -> "Settings":

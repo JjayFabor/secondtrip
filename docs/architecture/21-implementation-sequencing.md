@@ -93,10 +93,10 @@ page built as a one-off and everything after it inconsistent with it.
 - structlog + redaction processor, request-ID middleware ([18](18-observability.md))
 - Async SQLAlchemy engine tuned for PgBouncer (`statement_cache_size=0`); Alembic configured
   with the async engine, running as `DATABASE_URL_MIGRATIONS`
-- `infra/neon/bootstrap.sql`: creates `secondtrip_app` (non-owner, no BYPASSRLS) and
-  `ALTER DEFAULT PRIVILEGES` so every table a future migration creates is automatically
-  covered — applied both via Docker's `initdb.d` (local) and documented for a one-time psql
-  run against Neon (production)
+- `infra/neon/local-role.sql` creates the local-only `secondtrip_app`; the shared
+  `infra/neon/bootstrap.sql` fails closed unless that role already exists without elevated
+  attributes, then applies `ALTER DEFAULT PRIVILEGES` so every future table is covered — both
+  run via Docker's `initdb.d`, while production creates a unique credential before bootstrap
 - `TenantContext` (`core/tenancy.py`), tenant-aware session factory (`db/session.py`)
   emitting `SELECT set_config('app.current_org_id', :org_id, true)` as the first statement
   of every transaction

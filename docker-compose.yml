@@ -14,8 +14,9 @@ services:
     volumes:
       - secondtrip_pg_data:/var/lib/postgresql/data
       # Runs once, on first container creation, AS secondtrip_owner —
-      # see infra/neon/bootstrap.sql's header comment for why the
-      # executing role matters here.
+      # The first script creates the local-only app role; the shared bootstrap
+      # then verifies it is non-elevated and grants current/future privileges.
+      - ./infra/neon/local-role.sql:/docker-entrypoint-initdb.d/00-local-role.sql:ro
       - ./infra/neon/bootstrap.sql:/docker-entrypoint-initdb.d/01-bootstrap.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U secondtrip_owner -d secondtrip_dev"]

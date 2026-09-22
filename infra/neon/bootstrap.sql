@@ -5,12 +5,10 @@
 -- migrations (DATABASE_URL_MIGRATIONS) — required because ALTER DEFAULT
 -- PRIVILEGES below applies to future objects created BY THE ROLE THAT
 -- EXECUTES THIS SCRIPT, with no role specified. Used both against Neon
--- (manually, via psql against DATABASE_URL_MIGRATIONS) and locally
--- (mounted into the Postgres container's /docker-entrypoint-initdb.d/,
--- which runs as POSTGRES_USER — set to the local owner role below — so
--- `docker compose up` applies it automatically on first boot) — local dev
--- must behave like production or RLS bugs are discovered for the first
--- time in prod.
+-- (manually, via psql against DATABASE_URL_MIGRATIONS) and locally after
+-- local-role.sql creates the development-only role. This script never creates
+-- credentials: production must create secondtrip_app with a unique password
+-- first, and local development keeps its known password in local-role.sql.
 --
 -- secondtrip_app is the ONLY role the application ever connects as. It:
 --   * does NOT own any table (the migration role does), so it cannot
@@ -24,11 +22,27 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'secondtrip_app') THEN
-        -- Local-dev-only password. Production/Neon: create this role via
-        -- the provider's console or `ALTER ROLE ... PASSWORD` with a real
-        -- secret from the secret manager BEFORE pointing DATABASE_URL at
-        -- it — never reuse this value outside local development.
-        CREATE ROLE secondtrip_app WITH LOGIN PASSWORD 'secondtrip_app_dev_only' NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE;
+        RAISE EXCEPTION 'secondtrip_app must exist before bootstrap; create it with a unique password and no elevated attributes';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_roles
+        WHERE rolname = 'secondtrip_app'
+          AND (rolsuper OR rolbypassrls OR rolcreatedb OR rolcreaterole OR rolreplication)
+    ) THEN
+        RAISE EXCEPTION 'secondtrip_app has elevated attributes and is unsafe for RLS';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_auth_members memberships
+        JOIN pg_catalog.pg_roles granted_role ON granted_role.oid = memberships.roleid
+        JOIN pg_catalog.pg_roles member_role ON member_role.oid = memberships.member
+        WHERE member_role.rolname = 'secondtrip_app'
+          AND granted_role.rolname = 'neon_superuser'
+    ) THEN
+        RAISE EXCEPTION 'secondtrip_app must not inherit neon_superuser';
     END IF;
 END
 $$;

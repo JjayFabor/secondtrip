@@ -47,7 +47,7 @@ A misconfigured production boot should crash loudly, not serve insecurely.
 
 | Variable | | Default | Notes |
 | --- | :---: | --- | --- |
-| `DATABASE_URL` | R | — | App connection. **Pooled** Neon endpoint, **non-owner** role `secondtrip_app`. `postgresql+asyncpg://` |
+| `DATABASE_URL` | R | — | App connection. **Pooled** Neon endpoint, **non-owner** role `secondtrip_app`. Standard Neon `postgresql://` URLs are normalized for asyncpg. |
 | `DATABASE_URL_MIGRATIONS` | R | — | Alembic. **Direct** (unpooled) endpoint, **owner** role |
 | `DB_POOL_SIZE` | O | `5` | Neon connection limits are lower than self-hosted |
 | `DB_MAX_OVERFLOW` | O | `5` | |
