@@ -42,6 +42,30 @@ SENSITIVE_KEYS: frozenset[str] = frozenset(
     }
 )
 
+_SENSITIVE_PATH_PREFIXES = ("/api/v1/storage/local/",)
+
+
+def redact_request_path(path: str) -> str:
+    """Remove capability tokens and other credentials embedded in request paths."""
+    for prefix in _SENSITIVE_PATH_PREFIXES:
+        if path.startswith(prefix):
+            return f"{prefix}[REDACTED]"
+    return path
+
+
+class CapabilityPathRedactionFilter(logging.Filter):
+    """Redact capability URLs emitted by Uvicorn's built-in access logger."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        # Uvicorn access records use:
+        # (client_addr, method, full_path, http_version, status_code).
+        if isinstance(args, tuple) and len(args) >= 3 and isinstance(args[2], str):
+            redacted_args = list(args)
+            redacted_args[2] = redact_request_path(args[2])
+            record.args = tuple(redacted_args)
+        return True
+
 
 def redact_sensitive_fields(_logger: Any, _method_name: str, event_dict: EventDict) -> EventDict:
     for key in list(event_dict.keys()):
@@ -86,3 +110,7 @@ def configure_logging(settings: Settings) -> None:
     root_logger = logging.getLogger()
     root_logger.handlers = [handler]
     root_logger.setLevel(settings.log_level.upper())
+
+    uvicorn_access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(item, CapabilityPathRedactionFilter) for item in uvicorn_access.filters):
+        uvicorn_access.addFilter(CapabilityPathRedactionFilter())

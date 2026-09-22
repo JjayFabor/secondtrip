@@ -10,6 +10,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.logging import redact_request_path
+
 log = structlog.get_logger(__name__)
 
 
@@ -24,7 +26,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         log.info(
             event,
             method=request.method,
-            path=request.url.path,
+            path=redact_request_path(request.url.path),
             status=response.status_code,
             duration_ms=duration_ms,
         )

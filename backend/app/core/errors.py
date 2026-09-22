@@ -40,6 +40,15 @@ class NotFoundError(ApplicationError):
     title = "Not found"
 
 
+class UnauthorizedError(ApplicationError):
+    """Missing, invalid, or expired session — see
+    docs/architecture/03-authentication.md §2."""
+
+    status_code = status.HTTP_401_UNAUTHORIZED
+    code = "UNAUTHORIZED"
+    title = "Authentication required"
+
+
 class ForbiddenError(ApplicationError):
     status_code = status.HTTP_403_FORBIDDEN
     code = "FORBIDDEN"
@@ -50,6 +59,22 @@ class ConflictError(ApplicationError):
     status_code = status.HTTP_409_CONFLICT
     code = "CONFLICT"
     title = "Conflict"
+
+
+class RateLimitExceededError(ApplicationError):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    code = "RATE_LIMITED"
+    title = "Too many requests"
+
+    def __init__(self, detail: str, *, retry_after: int) -> None:
+        super().__init__(detail)
+        self.retry_after = retry_after
+
+
+class InvalidCursorRequestError(ApplicationError):
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    code = "INVALID_CURSOR"
+    title = "Invalid cursor"
 
 
 class EntitlementExceededError(ApplicationError):
@@ -66,6 +91,7 @@ def _problem_response(
     title: str,
     detail: str,
     errors: list[dict[str, str]] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
     body: dict[str, object] = {
@@ -79,13 +105,19 @@ def _problem_response(
     if errors:
         body["errors"] = errors
     return JSONResponse(
-        status_code=status_code, content=body, media_type="application/problem+json"
+        status_code=status_code,
+        content=body,
+        media_type="application/problem+json",
+        headers=headers,
     )
 
 
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApplicationError)
     async def _application_error_handler(request: Request, exc: ApplicationError) -> JSONResponse:
+        headers: dict[str, str] | None = None
+        if isinstance(exc, RateLimitExceededError):
+            headers = {"Retry-After": str(exc.retry_after)}
         return _problem_response(
             request,
             status_code=exc.status_code,
@@ -93,6 +125,7 @@ def register_error_handlers(app: FastAPI) -> None:
             title=exc.title,
             detail=exc.detail,
             errors=exc.errors,
+            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)

@@ -1,6 +1,5 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   FileWarning,
@@ -29,23 +28,35 @@ import { cn } from "@/lib/utils";
 export interface SidebarItem {
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: "overview" | "visits" | "callbacks" | "patterns" | "reports" | "imports" | "settings" | "help" | "account";
 }
 
 const PRIMARY_ITEMS: SidebarItem[] = [
-  { label: "Overview", href: "/app/dashboard", icon: LayoutGrid },
-  { label: "Visits", href: "/app/jobs", icon: Wrench },
-  { label: "Callbacks", href: "/app/rework", icon: FileWarning },
-  { label: "Patterns", href: "/app/analytics", icon: LineChartIcon },
-  { label: "Reports", href: "/app/analytics", icon: LineChartIcon },
-  { label: "Imports", href: "/app/imports", icon: FolderInput },
+  { label: "Overview", href: "/app/dashboard", icon: "overview" },
+  { label: "Visits", href: "/app/jobs", icon: "visits" },
+  { label: "Callbacks", href: "/app/rework", icon: "callbacks" },
+  { label: "Patterns", href: "/app/analytics", icon: "patterns" },
+  { label: "Reports", href: "/app/analytics", icon: "reports" },
+  { label: "Imports", href: "/app/imports", icon: "imports" },
 ];
 
 const SECONDARY_ITEMS: SidebarItem[] = [
-  { label: "Settings", href: "/app/settings", icon: Settings },
-  { label: "Help", href: "/app/help", icon: HelpCircle },
-  { label: "Account", href: "/app/account", icon: UserCircle },
+  { label: "Settings", href: "/app/settings", icon: "settings" },
+  { label: "Help", href: "/app/help", icon: "help" },
+  { label: "Account", href: "/app/account", icon: "account" },
 ];
+
+const ICONS = {
+  overview: LayoutGrid,
+  visits: Wrench,
+  callbacks: FileWarning,
+  patterns: LineChartIcon,
+  reports: LineChartIcon,
+  imports: FolderInput,
+  settings: Settings,
+  help: HelpCircle,
+  account: UserCircle,
+};
 
 interface SidebarProps {
   primaryItems?: SidebarItem[];
@@ -91,7 +102,7 @@ export function Sidebar({
 
       <ul className="mt-2 flex flex-1 flex-col gap-0.5">
         {primaryItems.map((item) => (
-          <SidebarLink key={item.label} item={item} active={item.href === activeHref} />
+          <SidebarLink key={item.label} item={item} active={isActiveItem(item.href, activeHref)} />
         ))}
       </ul>
 
@@ -99,15 +110,20 @@ export function Sidebar({
 
       <ul className="flex flex-col gap-0.5">
         {secondaryItems.map((item) => (
-          <SidebarLink key={item.label} item={item} active={item.href === activeHref} />
+          <SidebarLink key={item.label} item={item} active={isActiveItem(item.href, activeHref)} />
         ))}
       </ul>
     </nav>
   );
 }
 
+function isActiveItem(href: string, activeHref?: string): boolean {
+  const baseHref = href.split("?")[0];
+  return activeHref === baseHref || Boolean(activeHref?.startsWith(`${baseHref}/`));
+}
+
 function SidebarLink({ item, active }: { item: SidebarItem; active: boolean }) {
-  const Icon = item.icon;
+  const Icon = ICONS[item.icon];
   return (
     <li>
       <Link

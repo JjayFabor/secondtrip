@@ -44,6 +44,20 @@ async def test_request_id_is_propagated_when_supplied(client: httpx.AsyncClient)
     assert resp.headers["x-request-id"] == "test-fixed-id"
 
 
+async def test_security_headers_are_present_on_api_responses(client: httpx.AsyncClient) -> None:
+    resp = await client.get("/api/v1/orgs")
+    assert resp.status_code == 401
+    assert resp.headers["x-content-type-options"] == "nosniff"
+    assert resp.headers["x-frame-options"] == "DENY"
+    assert resp.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+    assert resp.headers["cache-control"] == "private, no-store"
+
+
+async def test_security_headers_are_present_on_health(client: httpx.AsyncClient) -> None:
+    resp = await client.get("/health")
+    assert resp.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+
 async def test_404_is_problem_json(client: httpx.AsyncClient) -> None:
     resp = await client.get("/this-route-does-not-exist")
     assert resp.status_code == 404
@@ -51,3 +65,16 @@ async def test_404_is_problem_json(client: httpx.AsyncClient) -> None:
     body = resp.json()
     assert body["status"] == 404
     assert "request_id" in body
+
+
+def test_openapi_operation_ids_are_unique_and_stable() -> None:
+    schema = create_app().openapi()
+    operation_ids = [
+        operation["operationId"]
+        for path in schema["paths"].values()
+        for operation in path.values()
+    ]
+    assert len(operation_ids) == len(set(operation_ids))
+    assert "register" in operation_ids
+    assert "listImports" in operation_ids
+    assert all("_endpoint_" not in operation_id for operation_id in operation_ids)
