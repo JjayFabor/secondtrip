@@ -1,12 +1,17 @@
 # Production launch runbook
 
-Last audited: 2026-09-22
+Last audited: 2026-09-23
 
 SecondTrip is not yet approved for a public production launch. The runtime architecture is
 sound, but the external services, operational controls, privacy flows, and deployment evidence
 below are not all in place. For this personal project, use one gated production stack with only
 fictional data until the checks pass; a permanent duplicate staging stack is not required. Paid
 launch remains blocked because billing is intentionally `noop` in V1.
+
+The public legal pages are implementation drafts, not approved legal documents. Keep them
+`noindex, nofollow` and keep imports limited to fictional or properly anonymized data until every
+legal gate below is complete. The counsel handoff is
+[`docs/legal/legal-review-checklist.md`](../legal/legal-review-checklist.md).
 
 This runbook implements the topology in
 [`docs/architecture/01-system-architecture.md`](../architecture/01-system-architecture.md).
@@ -184,8 +189,18 @@ example value.
 - [ ] Organization/account deletion, export, retention, and purge workflows in
       [`12-privacy-and-data-lifecycle.md`](../architecture/12-privacy-and-data-lifecycle.md) exist
       and are tested.
-- [ ] Privacy policy, terms, DPA, and subprocessor list are published; current footer links do not
-      yet have pages.
+- [x] Draft Privacy, Terms, DPA, and Subprocessor pages are publicly reachable for tester and
+      counsel review, visibly marked as AI-drafted, and excluded from indexing and the sitemap.
+- [ ] Qualified Philippine privacy/technology counsel approves final Privacy, Terms, DPA, and
+      Subprocessor text.
+- [ ] Confirmed operator identity, business address, jurisdiction, registration details where
+      applicable, and support/privacy contacts are published in the approved documents.
+- [ ] Final policies are published without draft markers only after every operational promise is
+      implemented and tested.
+- [ ] Terms/privacy acceptance captures the exact published version and timestamp, with evidence
+      appropriate to counsel's advice.
+- [ ] The fictional-or-properly-anonymized-data-only restriction remains visible at registration
+      and import and is lifted only after counsel approval and real-customer-data readiness.
 - [ ] The Microsoft Excel formula-safety check is completed.
 - [ ] Fifty candidates from real, permissioned customer data are manually reviewed for quality.
 - [ ] Frontend component/integration and critical-path browser tests run in CI.
@@ -202,5 +217,7 @@ example value.
 The application can be deployed as a gated production instance after the services in section 1
 are created. It must not yet be described as ready for real customer data. The shortest safe
 path is: create the services and final domains, deploy the committed configuration, load only
-fictional data, complete the R2 and Resend smoke tests, implement observability and privacy
-operations, and run the restore and end-to-end drills before opening the private beta.
+fictional or properly anonymized data, complete the R2 and Resend smoke tests, implement
+observability and privacy operations, obtain qualified legal approval using the counsel
+checklist, publish versioned final policies, and run the restore and end-to-end drills before
+explicitly lifting the data restriction.

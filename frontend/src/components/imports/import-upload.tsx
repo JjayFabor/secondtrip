@@ -9,6 +9,7 @@ import { useAppShell } from "@/components/dashboard/app-shell";
 import { formatBytes, ImportPageHeader, StepRail } from "@/components/imports/import-ui";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, api, getApiErrorMessage } from "@/lib/api";
@@ -30,6 +31,7 @@ export function ImportUploadView() {
   const [error, setError] = useState<string>();
   const [planLimit, setPlanLimit] = useState<number>();
   const [duplicate, setDuplicate] = useState<DuplicateState>();
+  const [testDataConfirmed, setTestDataConfirmed] = useState(false);
 
   function chooseFile(nextFile?: File) {
     setError(undefined);
@@ -72,7 +74,7 @@ export function ImportUploadView() {
   }
 
   async function handleUpload() {
-    if (!organization || !file || working) return;
+    if (!organization || !file || working || !testDataConfirmed) return;
     setWorking(true);
     setError(undefined);
     setDuplicate(undefined);
@@ -129,6 +131,27 @@ export function ImportUploadView() {
             </p>
           </div>
 
+          <div className="mt-6 border-l-4 border-warning bg-[var(--warning-bg)] p-4 text-text-on-accent">
+            <p className="text-sm font-semibold">Private-beta safeguard</p>
+            <p id="test-data-restriction" className="mt-1 text-sm leading-6">
+              Upload only fictional or properly anonymized test data. Do not include real
+              customer, technician, employee, address, phone, email, free-text note, or other
+              production personal data. This acknowledgement is a product safeguard, not a legal
+              consent or an auditable acceptance record.
+            </p>
+            <div className="mt-4 flex items-start gap-3">
+              <Checkbox
+                id="test-data-confirmation"
+                checked={testDataConfirmed}
+                onCheckedChange={(checked) => setTestDataConfirmed(checked === true)}
+                aria-describedby="test-data-restriction"
+              />
+              <Label htmlFor="test-data-confirmation" className="cursor-pointer text-sm leading-5">
+                I confirm this file contains only fictional or properly anonymized test data.
+              </Label>
+            </div>
+          </div>
+
           <div
             className={cn(
               "mt-6 flex min-h-52 flex-col items-center justify-center rounded-[var(--radius-card)] border border-dashed border-border-strong bg-surface-canvas p-6 text-center",
@@ -181,7 +204,10 @@ export function ImportUploadView() {
 
           {!duplicate && (
             <div className="mt-6 flex justify-end">
-              <Button onClick={() => void handleUpload()} disabled={!file || working || !organization}>
+              <Button
+                onClick={() => void handleUpload()}
+                disabled={!file || working || !organization || !testDataConfirmed}
+              >
                 {working ? "Uploading…" : "Upload CSV"}
               </Button>
             </div>
