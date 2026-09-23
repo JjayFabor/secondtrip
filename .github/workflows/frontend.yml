@@ -46,6 +46,8 @@ jobs:
 
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # No frontend test framework chosen yet — see
       # docs/architecture/19-testing-strategy.md. This step joins the
