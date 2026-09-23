@@ -1,0 +1,12 @@
+# SecondTrip
+
+SecondTrip is callback and rework analytics software for service businesses. It supplements an
+existing CRM or field-service management system: teams import CSV job history, review possible
+repeat visits surfaced by deterministic rules, inspect matching and non-matching evidence, and
+record a human classification. SecondTrip makes no AI-based product claims.
+
+Key pages:
+- / — product introduction and FAQ
+- /features — implemented workflow and product fit
+- /pricing — free private-beta offer and current limits
+- /contact — support, privacy, DPA, and private-beta enquiries

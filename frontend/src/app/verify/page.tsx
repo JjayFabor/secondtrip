@@ -6,6 +6,7 @@ import { VerifyForm } from "@/components/auth/auth-forms";
 
 export const metadata: Metadata = {
   title: "Verify your email — SecondTrip",
+  robots: { index: false, follow: false },
 };
 
 export default function VerifyPage() {

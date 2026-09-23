@@ -5,6 +5,7 @@ import { LoginForm } from "@/components/auth/auth-forms";
 
 export const metadata: Metadata = {
   title: "Sign in — SecondTrip",
+  robots: { index: false, follow: false },
 };
 
 export default function LoginPage() {
