@@ -79,5 +79,7 @@ services:
         sync: false
       - key: EMAIL_FROM_NAME
         value: SecondTrip
+      - key: CONTACT_RECIPIENT_ADDRESS
+        sync: false
       - key: BILLING_PROVIDER
         value: noop

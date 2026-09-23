@@ -45,6 +45,7 @@ export type RootCause = Schemas["RootCauseOut"];
 export type ReviewDecision = Schemas["ReviewDecision"];
 export type ReworkReview = Schemas["ReworkReviewOut"];
 export type CreateReviewInput = Schemas["CreateReviewRequest"];
+export type ContactInput = Schemas["ContactRequest"];
 
 type RegisterInput = Schemas["RegisterRequest"];
 type LoginInput = Schemas["LoginRequest"];
@@ -153,7 +154,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       headers,
     });
   } catch {
-    throw new ApiError("The local API is unavailable. Start it and try again.", 0);
+    throw new ApiError("The service is unavailable. Please try again.", 0);
   }
 
   const contentType = response.headers.get("content-type") ?? "";
@@ -171,6 +172,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const api = {
+  contact(input: ContactInput) {
+    return request<Schemas["ContactResponse"]>("/api/v1/contact", {
+      method: "POST",
+      body: input,
+    });
+  },
+
   register(input: RegisterInput) {
     return request<{ detail: string }>("/api/v1/auth/register", {
       method: "POST",

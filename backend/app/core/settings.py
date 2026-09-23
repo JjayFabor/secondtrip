@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     register_ip_window_seconds: int = 3600
     verification_ip_limit: int = 5
     verification_ip_window_seconds: int = 3600
+    contact_ip_limit: int = 5
+    contact_ip_window_seconds: int = 3600
     password_reset_email_limit: int = 3
     password_reset_ip_limit: int = 10
     password_reset_window_seconds: int = 3600
@@ -126,6 +128,7 @@ class Settings(BaseSettings):
     email_api_key: str | None = None
     email_from_address: str = "noreply@secondtrip.example.com"
     email_from_name: str = "SecondTrip"
+    contact_recipient_address: str | None = None
 
     @field_validator("database_url", "database_url_migrations", mode="before")
     @classmethod
