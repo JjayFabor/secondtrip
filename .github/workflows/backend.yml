@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ["backend/**", "infra/neon/**", ".github/workflows/backend.yml"]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 defaults:
   run:
     working-directory: backend

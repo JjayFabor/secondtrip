@@ -21,6 +21,10 @@ on:
       - "Makefile"
       - ".github/workflows/contracts.yml"
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   drift:
     runs-on: ubuntu-latest
