@@ -6,6 +6,7 @@ import { ResetPasswordForm } from "@/components/auth/auth-forms";
 
 export const metadata: Metadata = {
   title: "Choose a new password — SecondTrip",
+  robots: { index: false, follow: false },
 };
 
 export default function ResetPasswordPage() {

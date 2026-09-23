@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1.local_storage import router as local_storage_router
+from app.modules.contact.router import router as contact_router
 from app.modules.detection.router import router as detection_router
 from app.modules.identity.router import me_router as identity_me_router
 from app.modules.identity.router import router as identity_router
@@ -15,6 +16,7 @@ from app.modules.imports.router import router as imports_router
 from app.modules.organizations.router import invitations_router, me_org_router, orgs_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
+api_v1_router.include_router(contact_router)
 api_v1_router.include_router(identity_router)
 api_v1_router.include_router(identity_me_router)
 api_v1_router.include_router(orgs_router)

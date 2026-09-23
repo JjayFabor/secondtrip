@@ -105,6 +105,8 @@ produce intermittent "prepared statement already exists" errors under load.
 | `EMAIL_API_KEY` | P | — | Secret |
 | `EMAIL_FROM_ADDRESS` | R | — | e.g. `noreply@secondtrip.example.com` |
 | `EMAIL_FROM_NAME` | O | `SecondTrip` | |
+| `CONTACT_RECIPIENT_ADDRESS` | P | — | Required to enable the public contact form; not exposed to clients |
+| `CONTACT_IP_LIMIT` / `CONTACT_IP_WINDOW_SECONDS` | O | `5` / `3600` | Postgres-backed limit for public contact submissions |
 | `EMAIL_REPLY_TO` | O | — | |
 
 `console` in development prints the rendered email to stdout, including the verification link.

@@ -204,7 +204,12 @@ function ImportScene({ progress }: { progress: number }) {
           <div className="border-b border-border-subtle px-4 py-3">
             <p className="text-xs font-semibold text-text-primary">Supported field preview</p>
           </div>
-          <div className="overflow-x-auto">
+          <div
+            className="overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+            role="region"
+            tabIndex={0}
+            aria-label="Supported field preview. Use the arrow keys to scroll horizontally and review every column."
+          >
             <table className="w-full min-w-[460px] text-left text-[11px]">
               <thead className="border-b border-border-subtle bg-surface-canvas text-text-secondary">
                 <tr>

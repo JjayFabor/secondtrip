@@ -13,6 +13,10 @@ on:
       - "packages/contracts/src/api.d.ts"
       - ".github/workflows/frontend.yml"
 
+permissions:
+  contents: read
+  pull-requests: read
+
 defaults:
   run:
     working-directory: frontend
@@ -22,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -46,6 +52,8 @@ jobs:
 
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # No frontend test framework chosen yet — see
       # docs/architecture/19-testing-strategy.md. This step joins the

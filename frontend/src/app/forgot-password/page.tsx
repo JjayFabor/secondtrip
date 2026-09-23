@@ -5,6 +5,7 @@ import { ForgotPasswordForm } from "@/components/auth/auth-forms";
 
 export const metadata: Metadata = {
   title: "Reset your password — SecondTrip",
+  robots: { index: false, follow: false },
 };
 
 export default function ForgotPasswordPage() {

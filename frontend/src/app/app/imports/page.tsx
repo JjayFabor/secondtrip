@@ -6,7 +6,11 @@ import { getAuthenticatedBootstrap, selectOrganization, serverApi } from "@/lib/
 
 export const metadata: Metadata = { title: "Imports — SecondTrip" };
 
-export default async function ImportsPage({ searchParams }: PageProps<"/app/imports">) {
+interface ImportsPageProps {
+  searchParams: Promise<{ org?: string | string[] }>;
+}
+
+export default async function ImportsPage({ searchParams }: ImportsPageProps) {
   const [{ org }, { organizations }] = await Promise.all([
     searchParams,
     getAuthenticatedBootstrap(),

@@ -191,6 +191,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Contact Endpoint */
+        post: operations["submitContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -1082,6 +1099,32 @@ export interface components {
              * @default false
              */
             allow_duplicate: boolean;
+        };
+        /** ContactRequest */
+        ContactRequest: {
+            /** Company */
+            company?: string | null;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Message */
+            message: string;
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+            /**
+             * Website
+             * @default
+             */
+            website: string;
+        };
+        /** ContactResponse */
+        ContactResponse: {
+            /** Detail */
+            detail: string;
         };
         /** CreateImportOut */
         CreateImportOut: {
@@ -2109,6 +2152,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submitContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactResponse"];
                 };
             };
             /** @description Validation Error */

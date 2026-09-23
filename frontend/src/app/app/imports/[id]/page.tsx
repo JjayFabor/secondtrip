@@ -11,10 +11,15 @@ import { getAuthenticatedBootstrap, selectOrganization, serverApi } from "@/lib/
 
 export const metadata: Metadata = { title: "Import detail — SecondTrip" };
 
+interface ImportDetailPageProps {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ org?: string | string[] }>;
+}
+
 export default async function ImportDetailPage({
   params,
   searchParams,
-}: PageProps<"/app/imports/[id]">) {
+}: ImportDetailPageProps) {
   const [{ id }, { org }, { organizations }] = await Promise.all([
     params,
     searchParams,

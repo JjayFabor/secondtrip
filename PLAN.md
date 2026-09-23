@@ -577,6 +577,49 @@ legal, security checklist.
 - Maintenance conventions and the future real-component replacement map live in
   `frontend/src/components/marketing/product-walkthrough/README.md`.
 
+#### Public-site baseline and contact flow — ✅ completed 2026-09-23
+
+- Rebuilt the homepage around the implemented import → deterministic detection → complete
+  evidence → human review workflow, retained the fictional walkthrough, and added a real FAQ
+  whose visible copy and `FAQPage` JSON-LD share one source.
+- Added static `/features`, `/pricing`, `/contact`, `/privacy`, `/terms`, `/subprocessors`, and
+  `/dpa` routes. Copy makes no AI, integration, customer, metric, or paid-plan claims and states
+  plainly that organization deletion, user anonymisation, full exports, end-customer erasure,
+  and scheduled retention purges are not yet implemented.
+- Added grouped public navigation, a keyboard-safe mobile menu, canonical/OpenGraph/Twitter
+  metadata, typed JSON-LD helpers, a generated Open Graph card, `sitemap.xml`, `robots.txt`, and
+  `llms.txt`; every auth route now emits `noindex`. The Open Graph renderer is the sole documented
+  raw-color exception because `ImageResponse` cannot consume the application stylesheet or
+  Tailwind theme variables.
+- Added `POST /api/v1/contact` with strict validation, origin/CSRF protection, a generic
+  honeypot response, hashed-IP Postgres rate limiting, direct provider-neutral email delivery,
+  generic provider-failure handling, and no message persistence or request-content logging.
+  Production requires `CONTACT_RECIPIENT_ADDRESS`; an absent value returns a clear 503.
+- Regenerated the OpenAPI/TypeScript contracts. Verification: all **216 backend tests** pass,
+  including the 6 focused contact integration tests; Ruff, strict mypy, and all four import
+  contracts pass; contract regeneration is
+  deterministic with no post-generation drift; frontend ESLint, strict typecheck, and production
+  build pass. A local production server returned 200 for all 19 public/auth/discovery routes with
+  desktop and mobile user agents, all seven auth routes emitted `noindex`, and browser checks
+  confirmed native contact validation plus keyboard focus return from the mobile menu. An
+  independent desktop/mobile design evaluation passed across all eight public marketing routes.
+
+#### Legal-review posture — 🟨 public implementation complete; approval incomplete 2026-09-23
+
+- Marked `/privacy`, `/terms`, `/subprocessors`, and `/dpa` prominently as AI-drafted documents
+  for qualified legal review. All four emit `noindex, nofollow`, remain reachable from the
+  footer, and are excluded from the sitemap.
+- Limited private-beta imported datasets to fictional or properly anonymized test data in the
+  registration, homepage, pricing, and import UX. The import action has a required accessible
+  frontend-only acknowledgement; it is deliberately not represented as consent or an auditable
+  policy-acceptance record.
+- Added `docs/legal/legal-review-checklist.md` and explicit launch gates for operator details,
+  counsel approval, final publication, acceptance/version evidence, and lifting the data
+  restriction.
+- Public-site implementation is complete. Legal approval and real-customer-data readiness are
+  incomplete: operator facts, legal/privacy decisions, qualified review, lifecycle controls,
+  acceptance/versioning, and production-data authorization remain blocking.
+
 ---
 
 ## Decisions

@@ -1,31 +1,74 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, ClipboardCheck, ShieldCheck, Signal } from "lucide-react";
+import { ArrowRight, Check, ClipboardCheck, FileUp, Search, ShieldCheck } from "lucide-react";
 
 import { MarketingLayout } from "@/components/marketing/marketing-layout";
+import { FinalCta, SectionHeading } from "@/components/marketing/page-elements";
 import { ProductWalkthrough } from "@/components/marketing/product-walkthrough/product-walkthrough";
+import { JsonLd } from "@/components/seo/json-ld";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  faqJsonLd,
+  pageMetadata,
+  softwareApplicationJsonLd,
+  type FaqEntry,
+} from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "SecondTrip — calmer callback operations",
-  description: "Help service teams understand callbacks, review patterns, and prevent repeat work.",
-};
+export const metadata = pageMetadata({
+  title: "Callback and rework analytics",
+  description:
+    "Import service-job history, surface possible repeat visits, inspect every signal, and record the human decision without replacing your CRM or FSM.",
+  path: "/",
+});
+
+const FAQS: readonly FaqEntry[] = [
+  {
+    question: "Does SecondTrip replace our CRM or field-service system?",
+    answer:
+      "No. SecondTrip supplements the system you already use. You export job history as a CSV, review possible callbacks in SecondTrip, and keep running daily operations in your existing CRM or FSM.",
+  },
+  {
+    question: "How does SecondTrip decide that two visits may be related?",
+    answer:
+      "Deterministic rules compare details such as timing, customer, location, and equipment when those fields are available. The product shows the complete signal breakdown and score arithmetic rather than presenting a hidden verdict.",
+  },
+  {
+    question: "Does a high score mean a visit is definitely a callback?",
+    answer:
+      "No. A score measures the strength of the available evidence. A manager still confirms, rejects, or marks the pair uncertain, and that human decision is kept separately from the score.",
+  },
+  {
+    question: "What happens when a field is missing?",
+    answer:
+      "SecondTrip does not invent missing import data. A signal can be shown as not evaluable, and import rows missing required identity or date information are reported for correction.",
+  },
+  {
+    question: "What does the private beta cost?",
+    answer:
+      "The private beta is currently free. Payment processing is not enabled, and current usage boundaries are listed on the pricing page.",
+  },
+];
 
 export default function Home() {
   return (
     <MarketingLayout>
+      <JsonLd data={[softwareApplicationJsonLd(), faqJsonLd(FAQS)]} />
       <section className="border-b border-border-subtle bg-surface-raised">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-16 lg:py-24">
           <div>
             <Badge variant="neutral">Callback intelligence for service teams</Badge>
-            <h1 className="mt-6 max-w-2xl text-[42px] font-bold leading-[1.06] tracking-[-0.035em] text-text-primary sm:text-[56px]">
-              Make the second trip easier to prevent.
+            <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl">
+              Turn job history into a clear callback review.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-text-secondary sm:text-lg">
-              SecondTrip gives operations leaders a clear rhythm for spotting repeat work,
-              reviewing the signal with their team, and turning the lesson into a better first visit.
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-text-secondary">
+              Import service history, surface possible repeat visits, review every piece of
+              evidence, and record the human decision—without replacing your existing CRM or FSM.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
@@ -35,126 +78,108 @@ export default function Home() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="secondary">
-                <Link href="/login">Sign in</Link>
+                <Link href="/features">Explore the product</Link>
               </Button>
             </div>
             <div className="mt-9 grid gap-4 border-t border-border-subtle pt-6 sm:grid-cols-3">
-              <ProofPoint icon={Signal} label="One shared signal" />
-              <ProofPoint icon={ClipboardCheck} label="Human review" />
-              <ProofPoint icon={ShieldCheck} label="A record teams can act on" />
+              <ProofPoint label="Deterministic signals" />
+              <ProofPoint label="Complete evidence" />
+              <ProofPoint label="Human review history" />
             </div>
           </div>
-
-          <ProductPreview />
+          <VisitPairPreview />
         </div>
       </section>
 
       <section id="how-it-works" className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-        <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-primary">
-            A useful operating rhythm
-          </p>
-          <h2 className="mt-3 text-[30px] font-bold leading-tight text-text-primary sm:text-[36px]">
-            From a noisy callback list to a calmer conversation.
-          </h2>
-          <p className="mt-4 text-base leading-7 text-text-secondary">
-            Keep the work close to the people who know the job. SecondTrip makes the next best
-            question visible without pretending the dashboard knows more than your team does.
-          </p>
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <SectionHeading
+            eyebrow="How it works"
+            title="From exported history to an accountable decision."
+            description="The repetitive comparison is automated. Context and judgment remain with the team that knows the work."
+          />
+          <Link className="inline-flex items-center gap-2 font-semibold text-brand-primary" href="/features">
+            Product details <ArrowRight size={16} aria-hidden="true" />
+          </Link>
         </div>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          <ProcessCard number="01" title="Signal" description="Bring repeat visits and callback patterns into one place." />
-          <ProcessCard number="02" title="Review" description="Give a manager and technician a focused moment to add context." />
-          <ProcessCard number="03" title="Prevent" description="Capture the lesson so the next visit starts with better information." />
+        <ol className="mt-10 grid border-y border-border-strong md:grid-cols-4">
+          <ProcessStep number="01" icon={FileUp} title="Import" description="Map and validate a CSV export." />
+          <ProcessStep number="02" icon={Search} title="Detect" description="Surface possible return visits." />
+          <ProcessStep number="03" icon={ShieldCheck} title="Explain" description="Show every signal and score." />
+          <ProcessStep number="04" icon={ClipboardCheck} title="Review" description="Record the human classification." />
+        </ol>
+      </section>
+
+      <section className="border-y border-border-subtle bg-surface-raised">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 sm:py-20 lg:grid-cols-2 lg:items-center">
+          <SectionHeading
+            eyebrow="Fits the workflow you have"
+            title="Add a review layer, not another operating system."
+            description="SecondTrip starts with a CSV export from the system where your team already closes jobs. It gives managers a focused place to inspect possible callbacks and preserve the decision trail."
+          />
+          <div className="border-l-2 border-brand-primary pl-6">
+            <ol className="space-y-5 text-sm">
+              <WorkflowLine label="Your CRM or FSM" detail="remains the operational source" />
+              <WorkflowLine label="SecondTrip" detail="compares history and explains possible pairs" />
+              <WorkflowLine label="Your team" detail="makes and records the decision" />
+            </ol>
+          </div>
         </div>
       </section>
 
-      <section
-        id="product-preview"
-        aria-labelledby="product-preview-heading"
-        className="border-t border-border-subtle bg-surface-canvas"
-      >
+      <section id="product-preview">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <div className="grid gap-8 lg:grid-cols-[1.12fr_0.88fr] lg:items-end">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-primary">
-                Product preview
-              </p>
-              <h2
-                id="product-preview-heading"
-                className="mt-3 max-w-2xl text-[30px] font-bold leading-tight text-text-primary sm:text-[36px]"
-              >
-                See how SecondTrip works
-              </h2>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-text-secondary">
-                Follow a service-job example from imported history to a reviewed callback and
-                estimated rework cost.
-              </p>
-            </div>
+            <SectionHeading
+              eyebrow="Product walkthrough"
+              title="Follow one fictional pair from CSV to review."
+              description="The local walkthrough shows the product rhythm using fictional service data. It does not connect to a live workspace."
+            />
             <div className="border-l-2 border-brand-primary pl-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                The workflow
+              <p className="text-sm font-semibold text-text-primary">Import → detect → explain → review</p>
+              <p className="mt-2 text-sm leading-6 text-text-secondary">
+                Pause, replay, or move through the scenes manually.
               </p>
-              <ol className="mt-3 flex flex-wrap gap-x-2 gap-y-2 text-sm font-medium text-text-primary">
-                {["Import history", "Find possible returns", "Review evidence", "Classify", "Understand impact"].map(
-                  (step, index) => (
-                    <li key={step} className="flex items-center gap-2">
-                      {index > 0 && (
-                        <ArrowRight className="text-brand-primary" size={14} aria-hidden="true" />
-                      )}
-                      <span>{step}</span>
-                    </li>
-                  ),
-                )}
-              </ol>
-              <Button asChild variant="secondary" className="mt-5">
-                <Link href="/register">Create an account</Link>
-              </Button>
             </div>
           </div>
-
-          <div className="mt-10">
-            <ProductWalkthrough />
-          </div>
-
+          <div className="mt-10"><ProductWalkthrough /></div>
           <details className="mt-5 border-t border-border-subtle pt-4 text-sm text-text-secondary">
             <summary className="cursor-pointer font-semibold text-text-primary">
-              Text summary of the product preview
+              Text summary of the product walkthrough
             </summary>
             <p className="mt-3 max-w-4xl leading-6">
-              A fictional HVAC service-history CSV is previewed locally. SecondTrip surfaces two
-              jobs at the same location and equipment, six days apart, for a manager to review.
-              The manager confirms the pair as a callback. The preview then estimates $424 of
-              rework impact from labor, dispatch, overhead, opportunity cost, and parts.
+              A fictional service-history CSV is previewed locally. SecondTrip surfaces two jobs
+              at the same location and equipment, six days apart, for a manager to review. The
+              manager confirms the pair as a callback and the review is added to the evidence history.
             </p>
           </details>
         </div>
       </section>
 
-      <section id="faq" className="border-t border-border-subtle bg-surface-inverse text-text-inverse">
-        <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-12 sm:flex-row sm:items-center sm:justify-between sm:py-16">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Start small</p>
-            <h2 className="mt-2 text-[26px] font-semibold leading-tight sm:text-[30px]">
-              See the operating rhythm with a demo workspace.
-            </h2>
-          </div>
-          <Button asChild variant="secondary">
-            <Link href="/register">Create an account</Link>
-          </Button>
+      <section id="faq" className="border-t border-border-subtle bg-surface-raised">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 sm:py-20 lg:grid-cols-[0.75fr_1.25fr]">
+          <SectionHeading
+            eyebrow="FAQ"
+            title="Straight answers before you import anything."
+            description="The private beta is intentionally narrow. These answers describe the product that exists today."
+          />
+          <Accordion type="single" collapsible className="border-t border-border-strong">
+            {FAQS.map((item, index) => (
+              <AccordionItem key={item.question} value={`faq-${index + 1}`}>
+                <AccordionTrigger>{item.question}</AccordionTrigger>
+                <AccordionContent><p className="leading-6">{item.answer}</p></AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </section>
+
+      <FinalCta />
     </MarketingLayout>
   );
 }
 
-function ProofPoint({
-  icon: Icon,
-  label,
-}: {
-  icon: typeof Signal;
-  label: string;
-}) {
+function ProofPoint({ label }: { label: string }) {
   return (
     <div className="flex items-start gap-2 text-sm font-medium text-text-primary">
       <Check className="mt-0.5 shrink-0 text-brand-primary" size={16} aria-hidden="true" />
@@ -163,78 +188,70 @@ function ProofPoint({
   );
 }
 
-function ProductPreview() {
+function VisitPairPreview() {
   return (
-    <Card className="overflow-hidden border-border-strong bg-surface-canvas">
-      <div className="flex items-center justify-between border-b border-border-subtle bg-surface-raised px-4 py-3">
+    <div className="border border-border-strong bg-surface-canvas">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-border-subtle p-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Overview</p>
-          <p className="mt-0.5 text-sm font-semibold text-text-primary">Demo workspace</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">First visit</p>
+          <p className="mt-2 text-sm font-semibold text-text-primary">Service completed</p>
         </div>
-        <Badge variant="neutral">No live data</Badge>
-      </div>
-      <div className="space-y-4 p-4 sm:p-5">
-        <div className="grid grid-cols-3 gap-2">
-          <PreviewMetric label="Signals" value="—" />
-          <PreviewMetric label="In review" value="—" />
-          <PreviewMetric label="Prevented" value="—" />
-        </div>
-        <div className="rounded-[var(--radius-card)] border border-border-subtle bg-surface-raised p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-text-primary">The operating rhythm</p>
-              <p className="mt-1 text-xs text-text-secondary">A simple path from signal to action</p>
-            </div>
-            <span className="text-xs font-medium text-text-secondary">Preview</span>
-          </div>
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <PreviewStep label="Signal" tone="bg-brand-deep" />
-            <PreviewStep label="Review" tone="bg-brand-primary" />
-            <PreviewStep label="Prevent" tone="bg-accent" />
-          </div>
-          <div className="mt-3 h-1 rounded-full bg-border-subtle">
-            <div className="h-1 w-2/3 rounded-full bg-brand-primary" />
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-raised px-4 py-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] bg-[var(--warning-bg)] text-text-on-accent">
-            <Signal size={16} aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-text-primary">Connect your first source</p>
-            <p className="text-xs text-text-secondary">Your next useful signal starts here.</p>
-          </div>
-          <ArrowRight className="ml-auto shrink-0 text-text-secondary" size={16} aria-hidden="true" />
+        <div className="mx-3 h-px w-8 bg-brand-primary" aria-hidden="true" />
+        <div className="text-right">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Return visit</p>
+          <p className="mt-2 text-sm font-semibold text-text-primary">Six days later</p>
         </div>
       </div>
-    </Card>
-  );
-}
-
-function PreviewMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[var(--radius-control)] border border-border-subtle bg-surface-raised px-3 py-3">
-      <p className="text-[11px] font-medium text-text-secondary">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-text-primary">{value}</p>
+      <div className="space-y-4 p-5">
+        <PreviewLine label="Same customer" value="Matched" />
+        <PreviewLine label="Same equipment" value="Matched" />
+        <PreviewLine label="Description" value="Not evaluable" />
+        <div className="border-t border-border-subtle pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Decision</p>
+          <p className="mt-2 text-sm font-semibold text-text-primary">Waiting for a manager review</p>
+        </div>
+      </div>
     </div>
   );
 }
 
-function PreviewStep({ label, tone }: { label: string; tone: string }) {
+function PreviewLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 text-xs font-medium text-text-primary">
-      <span className={`h-2.5 w-2.5 rounded-full ${tone}`} aria-hidden="true" />
-      {label}
+    <div className="flex items-center justify-between gap-4 text-sm">
+      <span className="text-text-primary">{label}</span>
+      <span className="text-text-secondary">{value}</span>
     </div>
   );
 }
 
-function ProcessCard({ number, title, description }: { number: string; title: string; description: string }) {
+function ProcessStep({
+  number,
+  icon: Icon,
+  title,
+  description,
+}: {
+  number: string;
+  icon: typeof FileUp;
+  title: string;
+  description: string;
+}) {
   return (
-    <Card className="p-5">
-      <p className="text-xs font-semibold tracking-[0.14em] text-brand-primary">{number}</p>
-      <h3 className="mt-8 text-xl font-semibold text-text-primary">{title}</h3>
+    <li className="border-b border-border-subtle py-6 last:border-b-0 md:border-b-0 md:border-r md:px-6 md:first:pl-0 md:last:border-r-0 md:last:pr-0">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-brand-primary">{number}</span>
+        <Icon className="text-text-secondary" size={18} aria-hidden="true" />
+      </div>
+      <h3 className="mt-8 text-lg font-semibold text-text-primary">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p>
-    </Card>
+    </li>
+  );
+}
+
+function WorkflowLine({ label, detail }: { label: string; detail: string }) {
+  return (
+    <li>
+      <strong className="block text-text-primary">{label}</strong>
+      <span className="text-text-secondary">{detail}</span>
+    </li>
   );
 }

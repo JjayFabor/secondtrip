@@ -21,6 +21,10 @@ on:
       - "Makefile"
       - ".github/workflows/contracts.yml"
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   drift:
     runs-on: ubuntu-latest
@@ -32,6 +36,8 @@ jobs:
       DEBUG: "false"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v3
         with:
@@ -63,3 +69,5 @@ jobs:
 
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

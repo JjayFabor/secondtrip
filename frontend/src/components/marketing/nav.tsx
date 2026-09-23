@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
+import { MobileMenu } from "@/components/marketing/mobile-menu";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -16,7 +17,7 @@ const NAV_LINKS = [
 
 export function Nav() {
   return (
-    <header className="border-b border-border-subtle bg-surface-raised">
+    <header className="relative border-b border-border-subtle bg-surface-raised">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-6">
         <Link href="/" className="flex items-center">
           <Logo variant="horizontal" />
@@ -34,7 +35,7 @@ export function Nav() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-3 md:flex">
           <Button asChild variant="ghost" size="sm">
             <Link href="/login">Sign In</Link>
           </Button>
@@ -42,6 +43,7 @@ export function Nav() {
             <Link href="/register">Try SecondTrip</Link>
           </Button>
         </div>
+        <MobileMenu links={NAV_LINKS} />
       </div>
     </header>
   );

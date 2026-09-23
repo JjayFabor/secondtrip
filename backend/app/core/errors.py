@@ -71,6 +71,12 @@ class RateLimitExceededError(ApplicationError):
         self.retry_after = retry_after
 
 
+class ServiceUnavailableError(ApplicationError):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "SERVICE_UNAVAILABLE"
+    title = "Service unavailable"
+
+
 class InvalidCursorRequestError(ApplicationError):
     status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
     code = "INVALID_CURSOR"

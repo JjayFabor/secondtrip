@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ["backend/**", "infra/neon/**", ".github/workflows/backend.yml"]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 defaults:
   run:
     working-directory: backend
@@ -37,6 +41,8 @@ jobs:
       DATABASE_URL_MIGRATIONS: postgresql+asyncpg://secondtrip_owner:secondtrip_owner_dev_only@localhost:5439/secondtrip_dev
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -73,3 +79,5 @@ jobs:
 
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
