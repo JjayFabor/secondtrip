@@ -138,7 +138,7 @@ helper and not a per-endpoint concern.
 | Import error messages echoing raw cell values | Same |
 | Markdown rendering (if ever added) | Must sanitise; not present in V1 |
 | SVG or HTML upload | Not accepted |
-| CSP | `default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'` — set in Next.js middleware. Requires nonce-based handling for Next's inline bootstrap scripts |
+| CSP | Enforced globally by Next.js response headers. External origins are allowlisted for the API and direct R2 uploads; objects, frames, and embedding are denied. Static marketing pages retain CDN caching, so Next.js bootstrap/JSON-LD scripts and the existing runtime style attributes currently require narrowly scoped `'unsafe-inline'`. Development alone adds `'unsafe-eval'` and `ws:` for React diagnostics and HMR. A future nonce policy can be limited to the already-dynamic authenticated route group without making public pages dynamic. |
 | Session token theft via XSS | `httpOnly` cookie — unreachable from JS even if XSS occurs |
 
 The `httpOnly` cookie is what converts XSS from "account takeover" into "damage bounded to the
