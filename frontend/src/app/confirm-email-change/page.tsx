@@ -5,7 +5,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { ConfirmEmailChangeForm } from "./confirm-email-change-form";
 
 export const metadata: Metadata = {
-  title: "Confirm email change — SecondTrip",
+  title: "Confirm email change",
   robots: { index: false, follow: false },
 };
 

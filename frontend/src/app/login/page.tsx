@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/auth-forms";
 
 export const metadata: Metadata = {
-  title: "Sign in — SecondTrip",
+  title: "Sign in",
   robots: { index: false, follow: false },
 };
 

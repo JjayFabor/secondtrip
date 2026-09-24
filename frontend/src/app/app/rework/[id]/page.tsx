@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import { getAuthenticatedBootstrap, selectOrganization, serverApi } from "@/lib/api-server";
 
-export const metadata: Metadata = { title: "Callback evidence — SecondTrip" };
+export const metadata: Metadata = { title: "Callback evidence" };
 
 interface CandidatePageProps {
   params: Promise<{ id: string }>;

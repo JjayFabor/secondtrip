@@ -5,7 +5,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { AcceptInviteForm } from "./accept-invite-form";
 
 export const metadata: Metadata = {
-  title: "Accept invitation — SecondTrip",
+  title: "Accept invitation",
   robots: { index: false, follow: false },
 };
 

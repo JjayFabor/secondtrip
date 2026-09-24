@@ -4,7 +4,7 @@ import { CandidateListView } from "@/components/rework/candidate-list";
 import { getApiErrorMessage, type CandidateList } from "@/lib/api";
 import { getAuthenticatedBootstrap, selectOrganization, serverApi } from "@/lib/api-server";
 
-export const metadata: Metadata = { title: "Possible callbacks — SecondTrip" };
+export const metadata: Metadata = { title: "Possible callbacks" };
 
 interface ReworkPageProps {
   searchParams: Promise<{ org?: string | string[] }>;

@@ -4,7 +4,7 @@ import { ImportListView } from "@/components/imports/import-list";
 import { getApiErrorMessage, type ImportList } from "@/lib/api";
 import { getAuthenticatedBootstrap, selectOrganization, serverApi } from "@/lib/api-server";
 
-export const metadata: Metadata = { title: "Imports — SecondTrip" };
+export const metadata: Metadata = { title: "Imports" };
 
 interface ImportsPageProps {
   searchParams: Promise<{ org?: string | string[] }>;

@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { getAuthenticatedBootstrap, selectOrganization, serverApi } from "@/lib/api-server";
 
-export const metadata: Metadata = { title: "Import detail — SecondTrip" };
+export const metadata: Metadata = { title: "Import detail" };
 
 interface ImportDetailPageProps {
   params: Promise<{ id: string }>;

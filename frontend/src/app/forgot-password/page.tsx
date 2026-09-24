@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { ForgotPasswordForm } from "@/components/auth/auth-forms";
 
 export const metadata: Metadata = {
-  title: "Reset your password — SecondTrip",
+  title: "Reset your password",
   robots: { index: false, follow: false },
 };
 
